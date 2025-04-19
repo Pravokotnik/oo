@@ -80,8 +80,8 @@ Ob pomiku po strani navzdol se prikaže umetnik s platnom. Ta element uvaja glav
     + Obraz - sortiranje slik glede na emocije zaznanih obrazov, prikaz obrazov izrezanih iz slik glede na trenutno vreme, kjer je sončno veselo, deževno pa žalostno, uporabnik lahko premika sonce
     + Poza - gručenje slik po zaznani pozi osebe
     + Barvna kompozicija - prikaz slik po podobnosti barve v mrežni kompoziciji v stilu HSV izbornika barve
-    + Hough - prikaz gručenih slik po podobnosti zaznanih črt in krogov
-    + Objekt - prikaz nakljčne slike
+    + Hough - prikaz gručenih slik po podobnosti zaznanih črt in krogov, gumb za igrifikacijo
+    + Objekt - prikaz nakljčne slike z označenimi zaznanimi objekti
     
     Na vsakem od prikazov lahko uporabnik izbere poljubno sliko. Ob kliku nanjo se odpre podrobnejša analiza rezultata in opis postopka pridobitve le-tega.
 + **Prikaz slike in analiza rezultata:**
@@ -93,17 +93,15 @@ Ob pomiku po strani navzdol se prikaže umetnik s platnom. Ta element uvaja glav
     + Barvna kompozicija:
         + Na desni strani zaslona ima uporabnik dostop do histograma barvne analize izbrane slike. Uporabnik lahko histogram poljubno spreminja. Ob spremembi se slika na levi strani zaslona spremeni v tisto, z najbolj podobnim histogramom izbranemu.
     + Hough:
-        + 
-    
-+ **Igrifikacija:**
-    Nekateri deli vmesnika vključujejo igrifikacijske elemente, kot so:
-    + Ugibanje slike na podlagi Hough transformacije
-    + Prilagajanje vizualnih lastnosti za raziskovanje podobnosti
-+ **Dodatne funkcije:**
-    + Filtriranje po lastnostih (barve, robovi, objekti, osebe)
-    + Povečava/pomanjšava objektov z uporabo koleščka na miški
+        + Na levi strani zaslona ima uporabnik dostop do drsnika, s katerim lahko izbere korak v postopku zaznave črt in krogov s Hough transformacijo.
+        + Na desni strani ima uporabnik prikazan Hough prostor trenutne slike. Ko je uporabnik na prikazu zaznave robov (eden izmed korakov drsnika), lahko spreminja Hough prostor ali prikaz robov. Ob spremembi ene izmed teh dveh, se skladno spremeni tudi druga.
+        + Ko je uporabnik na prikazu slike lahko uporabi orodje za risanje črt in krogov. V tem primeru se bo slika zamenjala s tisto, ki ima like na najbolj podobnih pozicijah.
+    + Objekt:
+        + Ko uporabnik klikne na objekt se ta centrira na zaslon. Premik koleščka na miški nato najde sliko, kjer je enak obejkt prikazan večji ali manjši, odvisno od premika. 
 
-Vizualni slog bo čist in sodoben, z umetniškim pridihom, ki ohranja osredotočenost na vsebino slik in razumevanje računalniške obdelave.
+    Vedno bo pod prikazom slike naveden opis uporabljenega postopka za pridobitev trenutnega rezultata. 
++ **Igrifikacija:**
+    Igrifikacijo bomo vključili pri Hough transformaciji. Ko uporabnik klikne na gumb za igrifikacijo, se odpre nov zaslon, kjer sistem izbere 3 naključne slike ter za eno izmed njih prikaže njene zaznane črte in kroge. Uporabnik mora nato izbrati tisto sliko, ki se ujema z liki. Cilj je zadeti čim več pravilnih zaporednih poskusov.
 
 ### Gradivo
 
