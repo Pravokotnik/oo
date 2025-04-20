@@ -2,21 +2,19 @@
 
 ### Uvod 
 
-Naša skupina si je izbrala temo ogled velike zbirke slikarskih del. Oblikovali bomo spletno aplikacijo, ki bo delovala kot vmesnik za prikaz velike zbirke slikarskih del. Vmesnik je zasnovan kot virtualen učni pripomoček, namenjen uporabnikom, ki jih zanimajo osnove umetne zaznave (computer vision) in analiza vizualnih značilnosti.
+Naša skupina si je izbrala temo "Ogled velike zbirke slikarskih del". Oblikovali bomo spletno aplikacijo, ki bo delovala kot vmesnik za prikaz velike zbirke slikarskih del. Vmesnik je zasnovan kot virtualen učni pripomoček, namenjen uporabnikom, ki jih zanimajo osnove umetne zaznave (computer vision) in analiza vizualnih značilnosti.
 
-Poudarek projekta ni zgolj na prikazovanju umetniških del, temveč tudi na njihovi obdelavi in analizi z uporabo metod računalniškega vida.
-
-Cilj projekta je uporabniku na konkretnem primeru prikazati, kako računalnik vidi in interpretira sliko, ter ga ob tem seznaniti z umetniškimi deli. Na razumljiv in zabaven način želimo predstaviti delovanje metod strojnega učenja in umetne inteligence, hkrati pa nameniti pozornost tudi umetnikom, katerih ustvarjalnost v času razmaha umetne inteligence pogosto izgublja zasluženo prepoznavnost.
+Cilj projekta je uporabniku na konkretnem primeru prikazati, kako računalnik vidi in interpretira sliko, ter ga ob tem seznaniti z umetniškimi deli. Računalniški vid želimo prikazati na razumljiv in zabaven način, hkrati pa nameniti pozornost tudi umetnikom, katerih ustvarjalnost v času razmaha umetne inteligence pogosto izgublja zasluženo prepoznavnost.
 
 ### Rešitev
 
 Naša rešitev bo implementirana kot spletna aplikacija, kjer bo uporabnik lahko:
 + brskal po zbirki umetniških del
-+ filtriral slike po različnih vizualnih lastnostih (barva - odtenek in nasičenost, število ljudi, poze ljudi, robovi, objekti)
++ filtriral slike po različnih vizualnih lastnostih (barva - odtenek in nasičenost, poze ljudi, emocije obrazov, robovi, objekti)
 + izbral želeno telesno pozo, na podlagi katere bo sistem prikazal slike z osebami v podobni drži
 + spremljal korake umetne zaznave (faze Hough transformacije za zaznavo robov in rezultati Houghove transformacije)
 
-Aplikacija bo tako imela učni značaj, saj bo poleg rezultatov ponujala tudi vizualno razlago vsakega postopka obdelave slike.
+Aplikacija bo imela tudi učni značaj, saj bo poleg rezultatov ponujala tudi vizualno razlago vsakega postopka obdelave slike.
 
 ### Načrt
 
@@ -33,14 +31,18 @@ Na spletu smo našli nekaj podobnih projektov:
 + Teachable machine: https://teachablemachine.withgoogle.com/
 + ARTETIK: From the Art: https://artsandculture.google.com/color?project=guggenheim-bilbao&col=RGB_3F9CEF
 
+Četudi se te nanašajo na podobne koncepte, menimo da niso dosegli nivo interaktivnosti, preprostosti in poučnosti, ki jo želimo doseči s svojim projektom.
+
 ### Scenarij
 
 1. Uporabnik odpre spletno stran, kjer ga pričaka vstopni zaslon z dobrodšlico
 2. Ob pomiku navzdol se uporabniku prikaže umetnik s platnom
-3. Ob kliku na XRAY očala se aktivira orodje, ki ponudi možnosti za nadaljno analizo umetniških del:
+3. Ob kliku na XRAY očala se stilno spremeni scena, kar ponudi možnosti za nadaljno analizo umetniških del:
     + Obraz
     + Poza
     + Barvna kompozicija
+    + Zaznane ravne črte in krogi
+    + Zaznani objekti in njihova velikost
 4. Uporabnik izbere eno izmed ponujenih možnosti, kar sproži prilagojen prikaz
 5. Prilagojeni prikaz in analiza:
     + Mrežni prikaz:
@@ -64,7 +66,7 @@ Na spletu smo našli nekaj podobnih projektov:
                 + Uporabnik lahko pobarva svoj Hough prostor, sistem prikaže slike s podobnimi elementi
         + Zaznava objektov:
             + Prikaz zaznih objektov na sliki
-            + S pomikanjem koleščka na miški se simulira občutek povečanja ali manjšanja izbragena objekta z menjavo umetniškega dela na takšnega, kjer je izbrani objekt malo manjši ali večji
+            + S pomikanjem koleščka na miški se simulira občutek povečanja ali manjšanja izbranega objekta z menjavo umetniškega dela na takšnega, kjer je izbrani objekt malo manjši ali večji
 
 ### Vmesnik
 
@@ -88,16 +90,16 @@ Ob pomiku po strani navzdol se prikaže umetnik s platnom. Ta element uvaja glav
     + Obraz: 
         + Brez posebnosti.
     + Poza:
-        + Uporabnik ima na desni strani zaslona lutko, katero lahko premika v želeno pozo, na levi strani pa se slika spreminja glede na pozo.
+        + Uporabnik ima na desni strani zaslona lutko, katero lahko premika v želeno pozo z drag-and-drop interakcijo, na levi strani pa se slika spreminja glede na pozo.
         + Ob kliku na "play" gumb se prične animacija, kjer se zaporedoma prikazujejo slike s podobnimi, vendar malo drugačnimi pozami.
     + Barvna kompozicija:
-        + Na desni strani zaslona ima uporabnik dostop do histograma barvne analize izbrane slike. Uporabnik lahko histogram poljubno spreminja. Ob spremembi se slika na levi strani zaslona spremeni v tisto, z najbolj podobnim histogramom izbranemu.
+        + Na desni strani zaslona ima uporabnik dostop do histograma barvne analize izbrane slike. Uporabnik lahko histogram poljubno spreminja. Ob spremembi se slika na levi strani zaslona spremeni v tisto, z najbolj podobnim histogramom narisanemu.
     + Hough:
         + Na levi strani zaslona ima uporabnik dostop do drsnika, s katerim lahko izbere korak v postopku zaznave črt in krogov s Hough transformacijo.
-        + Na desni strani ima uporabnik prikazan Hough prostor trenutne slike. Ko je uporabnik na prikazu zaznave robov (eden izmed korakov drsnika), lahko spreminja Hough prostor ali prikaz robov. Ob spremembi ene izmed teh dveh, se skladno spremeni tudi druga.
+        + Na desni strani ima uporabnik prikazan Hough prostor trenutne slike. Ko je uporabnik na prikazu zaznave robov (eden izmed korakov drsnika), lahko spreminja Hough prostor ali prikaz robov tako da obarva nove piksle. Ob spremembi ene izmed teh dveh, se skladno spremeni tudi druga.
         + Ko je uporabnik na prikazu slike lahko uporabi orodje za risanje črt in krogov. V tem primeru se bo slika zamenjala s tisto, ki ima like na najbolj podobnih pozicijah.
     + Objekt:
-        + Ko uporabnik klikne na objekt se ta centrira na zaslon. Premik koleščka na miški nato najde sliko, kjer je enak obejkt prikazan večji ali manjši, odvisno od premika. 
+        + Ko uporabnik klikne na objekt se ta centrira na zaslon. Premik koleščka na miški nato najde sliko, kjer je enak objekt prikazan večji ali manjši, odvisno od premika. 
 
     Vedno bo pod prikazom slike naveden opis uporabljenega postopka za pridobitev trenutnega rezultata. 
 + **Igrifikacija:**
