@@ -16,7 +16,7 @@ os.environ["YOLO_VERBOSE"] = "False"
 PICKLE_DIR = "pickles"
 RATIO_PICKLE_FILE = os.path.join(PICKLE_DIR, "ratio_results.pkl")
 DETAILS_PICKLE_FILE = os.path.join(PICKLE_DIR, "details_results.pkl")
-FOLDER_PATH = './wikiart/wikiart/'
+FOLDER_PATH = './wikiart/'
 
 # Ensure pickle directory exists
 os.makedirs(PICKLE_DIR, exist_ok=True)

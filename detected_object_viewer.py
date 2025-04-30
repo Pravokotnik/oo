@@ -9,7 +9,7 @@ from pathlib import Path
 PICKLE_DIR = "pickles"
 RATIO_PICKLE_FILE = os.path.join(PICKLE_DIR, "ratio_results.pkl")
 DETAILS_PICKLE_FILE = os.path.join(PICKLE_DIR, "details_results.pkl")
-FOLDER_PATH = './wikiart/wikiart/'
+FOLDER_PATH = './wikiart/'
 WINDOW_WIDTH = 1920
 WINDOW_HEIGHT = 1080
 NUM_BUCKETS = 100
