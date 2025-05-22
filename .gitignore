@@ -1,2 +1,5 @@
 /wikiart
 yolo*.pt
+/pickles_by_style
+/pickles_edges_by_style
+/hough_edges_json_output
