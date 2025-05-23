@@ -167,9 +167,17 @@ def main():
         print(f"No style folders found in {INPUT_FOLDER}")
         return
 
-    first_style_folder = style_folders[0]
-    print(f"Processing only the first style folder: {first_style_folder}")
-    process_style_folder(first_style_folder, NUM_WORKERS)
+    for style_folder in style_folders:
+        style_name = os.path.basename(style_folder)
+        output_folder = os.path.join(JSON_OUTPUT_DIR, style_name)
+
+        # Check if output folder exists and has JSON files
+        if os.path.exists(output_folder) and any(f.endswith('.json') for f in os.listdir(output_folder)):
+            print(f"Skipping '{style_name}' — already processed.")
+            continue
+
+        print(f"Processing style folder: {style_folder}")
+        process_style_folder(style_folder, NUM_WORKERS)
 
 
 if __name__ == "__main__":

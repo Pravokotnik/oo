@@ -1,0 +1,761 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Interactive Edge Process Viewer</title>
+<style>
+  body { font-family: Arial, sans-serif; background: #222; color: #eee; text-align: center; }
+  #container {
+    display: flex;
+    justify-content: center;
+    gap: 20px;
+    margin-top: 20px;
+  }
+  canvas { border: 1px solid #555; }
+  #houghCanvas { cursor: crosshair; }
+  #houghCanvas.drawing { cursor: none; }
+  #controls { margin: 10px auto; width: 600px; }
+  #stepLabel { font-weight: bold; }
+  #houghControls {
+    margin: 15px auto;
+    padding: 15px;
+    background: #333;
+    border-radius: 8px;
+    width: 600px;
+  }
+  #drawingTools {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    justify-content: center;
+    margin: 10px 0;
+  }
+  .tool-group {
+    display: flex;
+    gap: 5px;
+    align-items: center;
+  }
+  button {
+    padding: 8px 16px;
+    background: #4a90e2;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+  }
+  button:hover { background: #357abd; }
+  button:disabled { background: #666; cursor: not-allowed; }
+  button.active { background: #e74c3c; }
+  input[type="range"] { width: 80px; }
+  #similarity { margin-top: 10px; }
+  #matchInfo {
+    background: #333;
+    padding: 10px;
+    border-radius: 5px;
+    margin-top: 10px;
+    min-height: 20px;
+    text-align: left;
+  }
+  #loadingStatus {
+    background: #444;
+    padding: 10px;
+    border-radius: 5px;
+    margin-top: 10px;
+    font-size: 14px;
+  }
+</style>
+</head>
+<body>
+
+<h1>Interactive Edge Process Viewer</h1>
+
+<div id="container">
+  <canvas id="canvas" width="512" height="512"></canvas>
+  <canvas id="houghCanvas" width="512" height="512"></canvas>
+</div>
+
+<div id="controls">
+  <button id="randomBtn">Random Image</button>
+  <br/><br/>
+  <input type="range" id="stepSlider" min="0" max="5" value="0" />
+  <div id="stepLabel">Step: original</div>
+</div>
+
+<div id="houghControls">
+  <h3>Interactive Hough Space</h3>
+  <div id="drawingTools">
+    <div class="tool-group">
+      <button id="toggleDraw">Enable Drawing</button>
+      <button id="clearHough">Clear Drawing</button>
+    </div>
+    <div class="tool-group">
+      <label>Brush Size:</label>
+      <input type="range" id="brushSize" min="1" max="20" value="5" />
+      <span id="brushSizeLabel">5</span>
+    </div>
+    <div class="tool-group">
+      <label>Intensity:</label>
+      <input type="range" id="brushIntensity" min="10" max="255" value="128" />
+      <span id="brushIntensityLabel">128</span>
+    </div>
+  </div>
+  <button id="findSimilar">Find Most Similar Image</button>
+  <div id="loadingStatus">Loading JSON files...</div>
+  <div id="matchInfo">Draw on the Hough space and click "Find Most Similar Image" to search</div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pako/2.1.0/pako.min.js"></script>
+
+<script>
+const PROCESSING_STEPS = [
+  'original', 'grayscale', 'gradient_magnitude', 'nonmaxima', 'hysteresis', 'canny_downscaled'
+];
+
+const canvas = document.getElementById('canvas');
+const ctx = canvas.getContext('2d');
+const width = canvas.width;
+const height = canvas.height;
+
+const houghCanvas = document.getElementById('houghCanvas');
+const houghCtx = houghCanvas.getContext('2d');
+
+const stepSlider = document.getElementById('stepSlider');
+const stepLabel = document.getElementById('stepLabel');
+const randomBtn = document.getElementById('randomBtn');
+
+const toggleDrawBtn = document.getElementById('toggleDraw');
+const clearHoughBtn = document.getElementById('clearHough');
+const brushSizeSlider = document.getElementById('brushSize');
+const brushSizeLabel = document.getElementById('brushSizeLabel');
+const brushIntensitySlider = document.getElementById('brushIntensity');
+const brushIntensityLabel = document.getElementById('brushIntensityLabel');
+const findSimilarBtn = document.getElementById('findSimilar');
+const matchInfo = document.getElementById('matchInfo');
+const loadingStatus = document.getElementById('loadingStatus');
+
+let dataKeys = [];
+let allData = {};
+let currentKey = null;
+let loadedJsonFiles = [];
+let originalImg = null;
+let edgesDownscaledImgData = null;
+let grayImageData = null;
+let gradientMagnitudeData = null;
+let nonmaxSuppressionData = null;
+let hysteresisData = null;
+let houghImgData = null;
+let originalHoughData = null;
+let userDrawnHoughData = null;
+let isDrawing = false;
+let drawingEnabled = false;
+
+// --- Helper Functions ---
+
+function decodeBase64Gzip(encoded) {
+  const b64 = encoded.data;
+  const binaryString = atob(b64);
+  const len = binaryString.length;
+  const bytes = new Uint8Array(len);
+  for(let i=0; i<len; i++) {
+    bytes[i] = binaryString.charCodeAt(i);
+  }
+  return pako.inflate(bytes);
+}
+
+function decodeArrayToUint8ClampedArray(encoded) {
+  const decompressed = decodeBase64Gzip(encoded);
+  const [h, w] = encoded.shape;
+  return {data: decompressed, width: w, height: h};
+}
+
+function toImageDataFromGray(grayArr, w, h) {
+  const imgData = ctx.createImageData(w, h);
+  for(let i=0; i<grayArr.length; i++) {
+    const v = grayArr[i];
+    imgData.data[i*4] = v;
+    imgData.data[i*4+1] = v;
+    imgData.data[i*4+2] = v;
+    imgData.data[i*4+3] = 255;
+  }
+  return imgData;
+}
+
+function rgbToGrayscale(imageData) {
+  const w = imageData.width;
+  const h = imageData.height;
+  const gray = new Uint8ClampedArray(w*h);
+  const data = imageData.data;
+  for(let i=0; i<w*h; i++) {
+    const r = data[i*4];
+    const g = data[i*4+1];
+    const b = data[i*4+2];
+    gray[i] = 0.299*r + 0.587*g + 0.114*b;
+  }
+  return gray;
+}
+
+function sobelFilter(gray, w, h) {
+  const Kx = [-1,0,1, -2,0,2, -1,0,1];
+  const Ky = [-1,-2,-1, 0,0,0, 1,2,1];
+
+  const Ix = new Float32Array(w*h);
+  const Iy = new Float32Array(w*h);
+
+  for(let y=1; y<h-1; y++) {
+    for(let x=1; x<w-1; x++) {
+      let gx=0, gy=0;
+      for(let ky=-1; ky<=1; ky++) {
+        for(let kx=-1; kx<=1; kx++) {
+          const px = x+kx;
+          const py = y+ky;
+          const val = gray[py*w + px];
+          const idx = (ky+1)*3 + (kx+1);
+          gx += val * Kx[idx];
+          gy += val * Ky[idx];
+        }
+      }
+      Ix[y*w + x] = gx;
+      Iy[y*w + x] = gy;
+    }
+  }
+  return {Ix, Iy};
+}
+
+function gradientMagnitude(Ix, Iy) {
+  const len = Ix.length;
+  const mag = new Uint8ClampedArray(len);
+  for(let i=0; i<len; i++) {
+    mag[i] = Math.min(255, Math.sqrt(Ix[i]*Ix[i] + Iy[i]*Iy[i]));
+  }
+  return mag;
+}
+
+function gradientAngle(Ix, Iy) {
+  const len = Ix.length;
+  const angle = new Float32Array(len);
+  for(let i=0; i<len; i++) {
+    angle[i] = Math.atan2(Iy[i], Ix[i]);
+  }
+  return angle;
+}
+
+function nonMaximaSuppression(mag, angle, w, h) {
+  const suppressed = new Uint8ClampedArray(w*h);
+  for(let y=1; y<h-1; y++) {
+    for(let x=1; x<w-1; x++) {
+      const i = y*w + x;
+      const theta = angle[i] * 180 / Math.PI;
+      let direction = ((theta < 0) ? theta + 180 : theta);
+      let neighbor1=0, neighbor2=0;
+
+      if ((direction >= 0 && direction < 22.5) || (direction >= 157.5 && direction <= 180)) {
+        neighbor1 = mag[i-1];
+        neighbor2 = mag[i+1];
+      } else if (direction >= 22.5 && direction < 67.5) {
+        neighbor1 = mag[i - w + 1];
+        neighbor2 = mag[i + w - 1];
+      } else if (direction >= 67.5 && direction < 112.5) {
+        neighbor1 = mag[i - w];
+        neighbor2 = mag[i + w];
+      } else if (direction >= 112.5 && direction < 157.5) {
+        neighbor1 = mag[i - w - 1];
+        neighbor2 = mag[i + w + 1];
+      }
+
+      if (mag[i] >= neighbor1 && mag[i] >= neighbor2) {
+        suppressed[i] = mag[i];
+      } else {
+        suppressed[i] = 0;
+      }
+    }
+  }
+  return suppressed;
+}
+
+function hysteresisThreshold(suppressed, w, h, lowRatio=0.04, highRatio=0.16) {
+  const highThresh = 255 * highRatio;
+  const lowThresh = 255 * lowRatio;
+
+  const strong = 255, weak = 75;
+  const result = new Uint8ClampedArray(w*h);
+
+  for(let i=0; i<w*h; i++) {
+    if(suppressed[i] >= highThresh) result[i] = strong;
+    else if(suppressed[i] >= lowThresh) result[i] = weak;
+    else result[i] = 0;
+  }
+
+  function isStrongNeighbor(x,y) {
+    for(let j=-1; j<=1; j++) {
+      for(let i=-1; i<=1; i++) {
+        if(i===0 && j===0) continue;
+        let nx = x+i, ny = y+j;
+        if(nx >= 0 && nx < w && ny >= 0 && ny < h) {
+          if(result[ny*w + nx] === strong) return true;
+        }
+      }
+    }
+    return false;
+  }
+
+  let changed = true;
+  while(changed) {
+    changed = false;
+    for(let y=1; y<h-1; y++) {
+      for(let x=1; x<w-1; x++) {
+        let i = y*w + x;
+        if(result[i] === weak && isStrongNeighbor(x,y)) {
+          result[i] = strong;
+          changed = true;
+        }
+      }
+    }
+  }
+
+  for(let i=0; i<w*h; i++) {
+    if(result[i] !== strong) result[i] = 0;
+  }
+
+  return result;
+}
+
+function initializeUserDrawnHough() {
+  if (originalHoughData) {
+    const w = originalHoughData.width;
+    const h = originalHoughData.height;
+    userDrawnHoughData = ctx.createImageData(w, h);
+    for(let i = 0; i < userDrawnHoughData.data.length; i += 4) {
+      userDrawnHoughData.data[i] = 0;
+      userDrawnHoughData.data[i+1] = 0;
+      userDrawnHoughData.data[i+2] = 0;
+      userDrawnHoughData.data[i+3] = 255;
+    }
+  }
+}
+
+function drawOnHough(x, y) {
+  if (!userDrawnHoughData || !originalHoughData) return;
+
+  const brushSize = parseInt(brushSizeSlider.value);
+  const intensity = parseInt(brushIntensitySlider.value);
+
+  const scaleX = originalHoughData.width / width;
+  const scaleY = originalHoughData.height / height;
+  const houghX = Math.floor(x * scaleX);
+  const houghY = Math.floor(y * scaleY);
+
+  const w = userDrawnHoughData.width;
+  const h = userDrawnHoughData.height;
+
+  for(let dy = -brushSize; dy <= brushSize; dy++) {
+    for(let dx = -brushSize; dx <= brushSize; dx++) {
+      if(dx*dx + dy*dy <= brushSize*brushSize) {
+        const nx = houghX + dx;
+        const ny = houghY + dy;
+        if(nx >= 0 && nx < w && ny >= 0 && ny < h) {
+          const idx = (ny * w + nx) * 4;
+          userDrawnHoughData.data[idx] = intensity;
+          userDrawnHoughData.data[idx+1] = intensity;
+          userDrawnHoughData.data[idx+2] = intensity;
+        }
+      }
+    }
+  }
+  redrawHoughCanvas();
+}
+
+function redrawHoughCanvas() {
+  houghCtx.clearRect(0, 0, width, height);
+
+  if(originalHoughData) {
+    const offscreen = document.createElement('canvas');
+    offscreen.width = originalHoughData.width;
+    offscreen.height = originalHoughData.height;
+    const offCtx = offscreen.getContext('2d');
+    offCtx.putImageData(originalHoughData, 0, 0);
+
+    houghCtx.imageSmoothingEnabled = false;
+    houghCtx.drawImage(offscreen, 0, 0, width, height);
+    houghCtx.imageSmoothingEnabled = true;
+  }
+
+  if(drawingEnabled && userDrawnHoughData) {
+    const offscreen2 = document.createElement('canvas');
+    offscreen2.width = userDrawnHoughData.width;
+    offscreen2.height = userDrawnHoughData.height;
+    const offCtx2 = offscreen2.getContext('2d');
+    offCtx2.putImageData(userDrawnHoughData, 0, 0);
+
+    houghCtx.globalCompositeOperation = 'screen';
+    houghCtx.imageSmoothingEnabled = false;
+    houghCtx.drawImage(offscreen2, 0, 0, width, height);
+    houghCtx.imageSmoothingEnabled = true;
+    houghCtx.globalCompositeOperation = 'source-over';
+  }
+}
+
+// === Core: Search calling Python server ===
+
+async function findMostSimilarImage() {
+  if (!userDrawnHoughData) {
+    matchInfo.textContent = "Please draw on the Hough space first.";
+    return;
+  }
+
+  const w = userDrawnHoughData.width;
+  const h = userDrawnHoughData.height;
+
+  const houghArray = [];
+  for (let y = 0; y < h; y++) {
+    const row = [];
+    for (let x = 0; x < w; x++) {
+      const idx = (y * w + x) * 4;
+      row.push(userDrawnHoughData.data[idx]);
+    }
+    houghArray.push(row);
+  }
+
+  matchInfo.textContent = "Searching server for similar images...";
+  findSimilarBtn.disabled = true;
+
+  try {
+    const response = await fetch('http://localhost:5000/search', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ hough_data: houghArray, top_k: 10, use_embeddings: true })
+    });
+
+    if (!response.ok) {
+      throw new Error(`Server error: ${response.statusText}`);
+    }
+
+    const data = await response.json();
+    displayServerResults(data);
+
+  } catch (error) {
+    matchInfo.textContent = `Search failed: ${error.message}`;
+  } finally {
+    findSimilarBtn.disabled = false;
+  }
+}
+
+function displayServerResults(data) {
+  if (!data.results || data.results.length === 0) {
+    matchInfo.innerHTML = "No similar images found.";
+    return;
+  }
+
+  let html = `<strong>Search complete!</strong><br>`;
+  html += `Top ${data.results.length} matches (search time: ${data.search_time_ms} ms):<br><ul>`;
+
+  data.results.forEach((res, i) => {
+    html += `<li><strong>#${i+1}</strong>: ${res.key} — Similarity: ${(res.similarity * 100).toFixed(2)}%<br>`;
+    html += `Source file: ${res.file}<br>Path: ${res.path}</li><br>`;
+  });
+
+  html += "</ul>";
+
+  matchInfo.innerHTML = html;
+
+  // --- Load top match image and its hough sinusoid data ---
+
+  const topResultKey = data.results[0].key;
+  currentKey = topResultKey;
+
+  if (!(topResultKey in allData)) {
+    console.warn("Top match not found in loaded data:", topResultKey);
+    return;
+  }
+
+  const entry = allData[topResultKey];
+
+  // Load and display original image on left canvas
+  originalImg = new Image();
+  originalImg.crossOrigin = "Anonymous";
+  originalImg.onload = () => {
+    drawStep(parseInt(stepSlider.value)); // redraw current step on left canvas
+  };
+  originalImg.src = entry.path;
+
+  // Decode and display Hough sinusoid data on right canvas
+  if (entry.hough_sinusoids) {
+    const decoded = decodeArrayToUint8ClampedArray(entry.hough_sinusoids);
+    originalHoughData = toImageDataFromGray(decoded.data, decoded.width, decoded.height);
+    initializeUserDrawnHough();
+    redrawHoughCanvas();
+  } else {
+    originalHoughData = null;
+    userDrawnHoughData = null;
+    houghCtx.clearRect(0, 0, width, height);
+  }
+}
+
+
+// === Load and render data ===
+
+async function discoverJsonFiles() {
+  const possibleFiles = [];
+  const folderPath = 'json_minimal_edges_base64/';
+
+  const commonNames = [
+    'Abstract_Expressionism',
+    'Art_Nouveau_Modern',
+    'Baroque',
+    'Cubism',
+    'Expressionism',
+    'Fauvism',
+    'Impressionism',
+    'Minimalism',
+    'Pop_Art',
+    'Post_Impressionism',
+    'Realism',
+    'Renaissance',
+    'Romanticism',
+    'Surrealism',
+    'Symbolism'
+  ];
+
+  for(const name of commonNames) {
+    for(let part = 1; part <= 5; part++) {
+      possibleFiles.push(`${folderPath}${name}_part${part}.json`);
+    }
+  }
+
+  return possibleFiles;
+}
+
+async function loadAllJsonFiles() {
+  loadingStatus.textContent = "Discovering JSON files...";
+
+  const possibleFiles = await discoverJsonFiles();
+  let loadedCount = 0;
+  let totalImages = 0;
+
+  for(const filePath of possibleFiles) {
+    try {
+      loadingStatus.textContent = `Loading ${filePath}... (${loadedCount} files loaded, ${totalImages} images)`;
+
+      const response = await fetch(filePath);
+      if(response.ok) {
+        const data = await response.json();
+        const imageCount = Object.keys(data).length;
+
+        Object.assign(allData, data);
+
+        loadedJsonFiles.push(filePath);
+        loadedCount++;
+        totalImages += imageCount;
+
+        loadingStatus.innerHTML = `
+          <strong>Progress:</strong> ${loadedCount} files loaded<br>
+          <strong>Total Images:</strong> ${totalImages}<br>
+          <strong>Latest:</strong> ${filePath.split('/').pop()} (${imageCount} images)
+        `;
+
+        await new Promise(resolve => setTimeout(resolve, 50));
+      }
+    } catch(err) {
+      console.log(`Skipped ${filePath}: ${err.message}`);
+    }
+  }
+
+  dataKeys = Object.keys(allData);
+
+  if(totalImages > 0) {
+    loadingStatus.innerHTML = `
+      <strong>✓ Loading Complete!</strong><br>
+      <strong>Files Loaded:</strong> ${loadedCount}<br>
+      <strong>Total Images:</strong> ${totalImages}<br>
+      <strong>Ready for similarity search</strong>
+    `;
+
+    loadRandomImage();
+  } else {
+    loadingStatus.innerHTML = `
+      <strong>⚠️ No JSON files found</strong><br>
+      Please ensure JSON files are in the json_minimal_edges_base64/ folder<br>
+      Expected format: StyleName_part1.json, StyleName_part2.json, etc.
+    `;
+  }
+}
+
+async function loadData() {
+  await loadAllJsonFiles();
+}
+
+function loadRandomImage() {
+  if(dataKeys.length === 0) {
+    console.warn("No images available to load");
+    return;
+  }
+
+  currentKey = dataKeys[Math.floor(Math.random() * dataKeys.length)];
+  const entry = allData[currentKey];
+
+  stepSlider.value = 0;
+  stepLabel.textContent = 'Step: original';
+
+  originalImg = new Image();
+  originalImg.crossOrigin = "Anonymous";
+  originalImg.onload = () => {
+    drawStep(0);
+    processImageSteps();
+    redrawHoughCanvas();
+  };
+  originalImg.onerror = () => {
+    ctx.clearRect(0,0,width,height);
+    houghCtx.clearRect(0,0,width,height);
+  };
+  originalImg.src = entry.path;
+
+  const decoded = decodeArrayToUint8ClampedArray(entry.edges_downscaled);
+  edgesDownscaledImgData = toImageDataFromGray(decoded.data, decoded.width, decoded.height);
+
+  if(entry.hough_sinusoids) {
+    const houghDecoded = decodeArrayToUint8ClampedArray(entry.hough_sinusoids);
+    houghImgData = toImageDataFromGray(houghDecoded.data, houghDecoded.width, houghDecoded.height);
+    originalHoughData = houghImgData;
+    initializeUserDrawnHough();
+  } else {
+    houghImgData = null;
+    originalHoughData = null;
+  }
+
+  matchInfo.innerHTML = `
+    <strong>Current Image:</strong> ${currentKey}<br>
+    <strong>Dataset Size:</strong> ${dataKeys.length} images<br>
+    Draw on the Hough space and click 'Find Most Similar Image' to search.
+  `;
+}
+
+function processImageSteps() {
+  ctx.clearRect(0,0,width,height);
+  ctx.drawImage(originalImg, 0, 0, width, height);
+  const imgData = ctx.getImageData(0, 0, width, height);
+  const gray = rgbToGrayscale(imgData);
+  grayImageData = toImageDataFromGray(gray, width, height);
+
+  const {Ix, Iy} = sobelFilter(gray, width, height);
+  const gradMag = gradientMagnitude(Ix, Iy);
+  const gradAng = gradientAngle(Ix, Iy);
+  gradientMagnitudeData = toImageDataFromGray(gradMag, width, height);
+
+  const nms = nonMaximaSuppression(gradMag, gradAng, width, height);
+  nonmaxSuppressionData = toImageDataFromGray(nms, width, height);
+
+  const hyst = hysteresisThreshold(nms, width, height);
+  hysteresisData = toImageDataFromGray(hyst, width, height);
+}
+
+function drawStep(stepIdx) {
+  ctx.clearRect(0, 0, width, height);
+  switch(PROCESSING_STEPS[stepIdx]) {
+    case 'original':
+      if(originalImg && originalImg.complete) {
+        ctx.drawImage(originalImg, 0, 0, width, height);
+      }
+      break;
+    case 'grayscale':
+      if(grayImageData) ctx.putImageData(grayImageData, 0, 0);
+      break;
+    case 'gradient_magnitude':
+      if(gradientMagnitudeData) ctx.putImageData(gradientMagnitudeData, 0, 0);
+      break;
+    case 'nonmaxima':
+      if(nonmaxSuppressionData) ctx.putImageData(nonmaxSuppressionData, 0, 0);
+      break;
+    case 'hysteresis':
+      if(hysteresisData) ctx.putImageData(hysteresisData, 0, 0);
+      break;
+    case 'canny_downscaled':
+      if(edgesDownscaledImgData) {
+        const offscreen = document.createElement('canvas');
+        offscreen.width = edgesDownscaledImgData.width;
+        offscreen.height = edgesDownscaledImgData.height;
+        const offCtx = offscreen.getContext('2d');
+        offCtx.putImageData(edgesDownscaledImgData, 0, 0);
+        ctx.imageSmoothingEnabled = false;
+        ctx.drawImage(offscreen, 0, 0, width, height);
+        ctx.imageSmoothingEnabled = true;
+      }
+      break;
+  }
+}
+
+// === Event Listeners ===
+
+stepSlider.addEventListener('input', e => {
+  const val = parseInt(e.target.value);
+  stepLabel.textContent = `Step: ${PROCESSING_STEPS[val]}`;
+  drawStep(val);
+});
+
+randomBtn.addEventListener('click', () => {
+  loadRandomImage();
+});
+
+toggleDrawBtn.addEventListener('click', () => {
+  drawingEnabled = !drawingEnabled;
+  if(drawingEnabled) {
+    toggleDrawBtn.textContent = 'Disable Drawing';
+    toggleDrawBtn.classList.add('active');
+    houghCanvas.classList.add('drawing');
+    initializeUserDrawnHough();
+  } else {
+    toggleDrawBtn.textContent = 'Enable Drawing';
+    toggleDrawBtn.classList.remove('active');
+    houghCanvas.classList.remove('drawing');
+  }
+  redrawHoughCanvas();
+});
+
+clearHoughBtn.addEventListener('click', () => {
+  initializeUserDrawnHough();
+  redrawHoughCanvas();
+  matchInfo.textContent = "Drawing cleared. Draw on the Hough space and click 'Find Most Similar Image' to search.";
+});
+
+brushSizeSlider.addEventListener('input', e => {
+  brushSizeLabel.textContent = e.target.value;
+});
+
+brushIntensitySlider.addEventListener('input', e => {
+  brushIntensityLabel.textContent = e.target.value;
+});
+
+findSimilarBtn.addEventListener('click', findMostSimilarImage);
+
+houghCanvas.addEventListener('mousedown', e => {
+  if(!drawingEnabled) return;
+  isDrawing = true;
+  const rect = houghCanvas.getBoundingClientRect();
+  const x = e.clientX - rect.left;
+  const y = e.clientY - rect.top;
+  drawOnHough(x, y);
+});
+
+houghCanvas.addEventListener('mousemove', e => {
+  if(!drawingEnabled || !isDrawing) return;
+  const rect = houghCanvas.getBoundingClientRect();
+  const x = e.clientX - rect.left;
+  const y = e.clientY - rect.top;
+  drawOnHough(x, y);
+});
+
+houghCanvas.addEventListener('mouseup', () => {
+  isDrawing = false;
+});
+
+houghCanvas.addEventListener('mouseleave', () => {
+  isDrawing = false;
+});
+
+// === Initialize ===
+
+loadData();
+
+</script>
+</body>
+</html>
