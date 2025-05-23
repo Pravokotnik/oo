@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Edge Process Viewer</title>
+<style>
+  body { font-family: Arial, sans-serif; background: #222; color: #eee; text-align: center; }
+  canvas { border: 1px solid #555; margin: 10px; }
+  #controls { margin: 10px; }
+  #stepLabel { font-weight: bold; }
+</style>
+</head>
+<body>
+
+<h1>Edge Process Viewer (HTML/JS)</h1>
+
+<canvas id="canvas" width="512" height="512"></canvas>
+<div id="controls">
+  <button id="randomBtn">Random Image</button>
+  <br/><br/>
+  <input type="range" id="stepSlider" min="0" max="5" value="0" />
+  <div id="stepLabel">Step: original</div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pako/2.1.0/pako.min.js"></script>
+
+<script>
+// Processing steps labels:
+const PROCESSING_STEPS = [
+  'original',
+  'grayscale',
+  'gradient_magnitude',
+  'nonmaxima',
+  'hysteresis',
+  'canny_downscaled'
+];
+
+// Canvas and context
+const canvas = document.getElementById('canvas');
+const ctx = canvas.getContext('2d');
+const width = canvas.width;
+const height = canvas.height;
+
+// UI elements
+const stepSlider = document.getElementById('stepSlider');
+const stepLabel = document.getElementById('stepLabel');
+const randomBtn = document.getElementById('randomBtn');
+
+// Global state
+let dataKeys = [];
+let allData = {};
+let currentKey = null;
+let originalImg = null;
+let edgesDownscaledImgData = null;
+
+let grayImageData = null;        // Grayscale full size ImageData
+let gradientMagnitudeData = null;
+let nonmaxSuppressionData = null;
+let hysteresisData = null;
+
+////////////////////
+// Helpers & Decoding
+
+function decodeBase64Gzip(encoded) {
+  const b64 = encoded.data;
+  const binaryString = atob(b64);
+  const len = binaryString.length;
+  const bytes = new Uint8Array(len);
+  for(let i=0; i<len; i++) {
+    bytes[i] = binaryString.charCodeAt(i);
+  }
+  return pako.inflate(bytes);
+}
+
+function decodeArrayToUint8ClampedArray(encoded) {
+  const decompressed = decodeBase64Gzip(encoded);
+  const [h, w] = encoded.shape;
+  return {data: decompressed, width: w, height: h};
+}
+
+function toImageDataFromGray(grayArr, w, h) {
+  const imgData = ctx.createImageData(w, h);
+  for(let i=0; i<grayArr.length; i++) {
+    const v = grayArr[i];
+    imgData.data[i*4] = v;
+    imgData.data[i*4+1] = v;
+    imgData.data[i*4+2] = v;
+    imgData.data[i*4+3] = 255;
+  }
+  return imgData;
+}
+
+////////////////////
+// Image Processing Functions (JS implementations)
+
+function rgbToGrayscale(imageData) {
+  const w = imageData.width;
+  const h = imageData.height;
+  const gray = new Uint8ClampedArray(w*h);
+  const data = imageData.data;
+  for(let i=0; i<w*h; i++) {
+    const r = data[i*4];
+    const g = data[i*4+1];
+    const b = data[i*4+2];
+    // luminosity method
+    gray[i] = 0.299*r + 0.587*g + 0.114*b;
+  }
+  return gray;
+}
+
+function sobelFilter(gray, w, h) {
+  // Sobel kernels
+  const Kx = [-1,0,1, -2,0,2, -1,0,1];
+  const Ky = [-1,-2,-1, 0,0,0, 1,2,1];
+
+  const Ix = new Float32Array(w*h);
+  const Iy = new Float32Array(w*h);
+
+  for(let y=1; y<h-1; y++) {
+    for(let x=1; x<w-1; x++) {
+      let gx=0, gy=0;
+      for(let ky=-1; ky<=1; ky++) {
+        for(let kx=-1; kx<=1; kx++) {
+          const px = x+kx;
+          const py = y+ky;
+          const val = gray[py*w + px];
+          const idx = (ky+1)*3 + (kx+1);
+          gx += val * Kx[idx];
+          gy += val * Ky[idx];
+        }
+      }
+      Ix[y*w + x] = gx;
+      Iy[y*w + x] = gy;
+    }
+  }
+  return {Ix, Iy};
+}
+
+function gradientMagnitude(Ix, Iy) {
+  const len = Ix.length;
+  const mag = new Uint8ClampedArray(len);
+  for(let i=0; i<len; i++) {
+    mag[i] = Math.min(255, Math.sqrt(Ix[i]*Ix[i] + Iy[i]*Iy[i]));
+  }
+  return mag;
+}
+
+function gradientAngle(Ix, Iy) {
+  const len = Ix.length;
+  const angle = new Float32Array(len);
+  for(let i=0; i<len; i++) {
+    angle[i] = Math.atan2(Iy[i], Ix[i]);
+  }
+  return angle;
+}
+
+function nonMaximaSuppression(mag, angle, w, h) {
+  // returns Uint8ClampedArray with suppressed edges
+  const suppressed = new Uint8ClampedArray(w*h);
+  // Convert angle to degrees 0-180
+  for(let y=1; y<h-1; y++) {
+    for(let x=1; x<w-1; x++) {
+      const i = y*w + x;
+      const theta = angle[i] * 180 / Math.PI;
+      let direction = ((theta < 0) ? theta + 180 : theta);
+      let neighbor1=0, neighbor2=0;
+
+      // Determine neighbors to compare based on direction
+      if ((direction >= 0 && direction < 22.5) || (direction >= 157.5 && direction <= 180)) {
+        neighbor1 = mag[i-1];
+        neighbor2 = mag[i+1];
+      } else if (direction >= 22.5 && direction < 67.5) {
+        neighbor1 = mag[i - w + 1];
+        neighbor2 = mag[i + w - 1];
+      } else if (direction >= 67.5 && direction < 112.5) {
+        neighbor1 = mag[i - w];
+        neighbor2 = mag[i + w];
+      } else if (direction >= 112.5 && direction < 157.5) {
+        neighbor1 = mag[i - w - 1];
+        neighbor2 = mag[i + w + 1];
+      }
+
+      if (mag[i] >= neighbor1 && mag[i] >= neighbor2) {
+        suppressed[i] = mag[i];
+      } else {
+        suppressed[i] = 0;
+      }
+    }
+  }
+  return suppressed;
+}
+
+function hysteresisThreshold(suppressed, w, h, lowRatio=0.04, highRatio=0.16) {
+  const highThresh = 255 * highRatio;
+  const lowThresh = 255 * lowRatio;
+
+  const strong = 255, weak = 75;
+  const result = new Uint8ClampedArray(w*h);
+
+  // Mark strong and weak pixels
+  for(let i=0; i<w*h; i++) {
+    if(suppressed[i] >= highThresh) result[i] = strong;
+    else if(suppressed[i] >= lowThresh) result[i] = weak;
+    else result[i] = 0;
+  }
+
+  // Track edges connected to strong pixels
+  function isStrongNeighbor(x,y) {
+    for(let j=-1; j<=1; j++) {
+      for(let i=-1; i<=1; i++) {
+        if(i===0 && j===0) continue;
+        let nx = x+i, ny = y+j;
+        if(nx >= 0 && nx < w && ny >= 0 && ny < h) {
+          if(result[ny*w + nx] === strong) return true;
+        }
+      }
+    }
+    return false;
+  }
+
+  let changed = true;
+  while(changed) {
+    changed = false;
+    for(let y=1; y<h-1; y++) {
+      for(let x=1; x<w-1; x++) {
+        let i = y*w + x;
+        if(result[i] === weak && isStrongNeighbor(x,y)) {
+          result[i] = strong;
+          changed = true;
+        }
+      }
+    }
+  }
+
+  // Remove remaining weak pixels
+  for(let i=0; i<w*h; i++) {
+    if(result[i] !== strong) result[i] = 0;
+  }
+
+  return result;
+}
+
+//////////////////////
+// Main logic
+
+async function loadData() {
+  const jsonPath = 'json_minimal_edges_base64/Abstract_Expressionism_part1.json'; // Adjust path
+  try {
+    const response = await fetch(jsonPath);
+    allData = await response.json();
+    dataKeys = Object.keys(allData);
+    loadRandomImage();
+  } catch(err) {
+    alert(`Failed to load JSON data: ${err}`);
+  }
+}
+
+function loadRandomImage() {
+  currentKey = dataKeys[Math.floor(Math.random() * dataKeys.length)];
+  const entry = allData[currentKey];
+
+  stepSlider.value = 0;
+  stepLabel.textContent = 'Step: original';
+
+  originalImg = new Image();
+  originalImg.crossOrigin = "Anonymous";
+  originalImg.onload = () => {
+    // Draw original immediately
+    drawStep(0);
+
+    // Also process grayscale and gradient etc on original after loaded
+    processImageSteps();
+  };
+  originalImg.onerror = () => {
+    console.warn("Failed to load original image.");
+    ctx.clearRect(0,0,width,height);
+  };
+  originalImg.src = entry.path;
+
+  // Decode edges_downscaled
+  const decoded = decodeArrayToUint8ClampedArray(entry.edges_downscaled);
+  edgesDownscaledImgData = toImageDataFromGray(decoded.data, decoded.width, decoded.height);
+}
+
+function processImageSteps() {
+  // Get grayscale image data from originalImg
+  ctx.clearRect(0,0,width,height);
+  ctx.drawImage(originalImg, 0, 0, width, height);
+  const imgData = ctx.getImageData(0, 0, width, height);
+  const gray = rgbToGrayscale(imgData);
+  grayImageData = toImageDataFromGray(gray, width, height);
+
+  // Sobel gradients
+  const {Ix, Iy} = sobelFilter(gray, width, height);
+
+  // Gradient magnitude and angle
+  const gradMag = gradientMagnitude(Ix, Iy);
+  const gradAng = gradientAngle(Ix, Iy);
+
+  gradientMagnitudeData = toImageDataFromGray(gradMag, width, height);
+
+  // Nonmaxima suppression
+  const nms = nonMaximaSuppression(gradMag, gradAng, width, height);
+  nonmaxSuppressionData = toImageDataFromGray(nms, width, height);
+
+  // Hysteresis thresholding
+  const hyst = hysteresisThreshold(nms, width, height);
+  hysteresisData = toImageDataFromGray(hyst, width, height);
+}
+
+function drawStep(stepIdx) {
+  ctx.clearRect(0, 0, width, height);
+  switch(PROCESSING_STEPS[stepIdx]) {
+    case 'original':
+      if(originalImg && originalImg.complete) {
+        ctx.drawImage(originalImg, 0, 0, width, height);
+      }
+      break;
+    case 'grayscale':
+      if(grayImageData) {
+        ctx.putImageData(grayImageData, 0, 0);
+      }
+      break;
+    case 'gradient_magnitude':
+      if(gradientMagnitudeData) {
+        ctx.putImageData(gradientMagnitudeData, 0, 0);
+      }
+      break;
+    case 'nonmaxima':
+      if(nonmaxSuppressionData) {
+        ctx.putImageData(nonmaxSuppressionData, 0, 0);
+      }
+      break;
+    case 'hysteresis':
+      if(hysteresisData) {
+        ctx.putImageData(hysteresisData, 0, 0);
+      }
+      break;
+    case 'canny_downscaled':
+      if(edgesDownscaledImgData) {
+        // upscale nearest neighbor
+        const offscreen = document.createElement('canvas');
+        offscreen.width = edgesDownscaledImgData.width;
+        offscreen.height = edgesDownscaledImgData.height;
+        const offCtx = offscreen.getContext('2d');
+        offCtx.putImageData(edgesDownscaledImgData, 0, 0);
+
+        ctx.imageSmoothingEnabled = false;
+        ctx.drawImage(offscreen, 0, 0, width, height);
+        ctx.imageSmoothingEnabled = true;
+      }
+      break;
+    default:
+      ctx.fillStyle = 'white';
+      ctx.font = '20px Arial';
+      ctx.fillText('Step not implemented in JS yet', 10, 50);
+  }
+}
+
+stepSlider.addEventListener('input', e => {
+  const val = parseInt(e.target.value);
+  stepLabel.textContent = `Step: ${PROCESSING_STEPS[val]}`;
+  drawStep(val);
+});
+
+randomBtn.addEventListener('click', () => {
+  loadRandomImage();
+});
+
+loadData();
+
+</script>
+</body>
+</html>
