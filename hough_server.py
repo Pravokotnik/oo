@@ -42,6 +42,7 @@ class HoughDatabase:
         logger.info(f"Loading JSON files from folder: {self.json_folder}")
         if not os.path.exists(self.json_folder):
             logger.error(f"Folder '{self.json_folder}' does not exist!")
+            self.loading_complete.set()
             return
         total_images = 0
         for filename in os.listdir(self.json_folder):
