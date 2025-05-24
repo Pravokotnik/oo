@@ -1,0 +1,734 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Interactive Edge Process Viewer</title>
+  <style>
+    body { font-family: Arial, sans-serif; background: #222; color: #eee; text-align: center; }
+    #container {
+      display: flex;
+      justify-content: center;
+      gap: 20px;
+      margin-top: 20px;
+    }
+    canvas { border: 1px solid #555; }
+    #houghCanvas { cursor: crosshair; }
+    #houghCanvas.drawing { cursor: none; }
+    #controls { margin: 10px auto; width: 600px; }
+    #stepLabel { font-weight: bold; }
+    #houghControls {
+      margin: 15px auto;
+      padding: 15px;
+      background: #333;
+      border-radius: 8px;
+      width: 600px;
+    }
+    #drawingTools {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      justify-content: center;
+      margin: 10px 0;
+    }
+    .tool-group {
+      display: flex;
+      gap: 5px;
+      align-items: center;
+    }
+    button {
+      padding: 8px 16px;
+      background: #4a90e2;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 14px;
+    }
+    button:hover { background: #357abd; }
+    button:disabled { background: #666; cursor: not-allowed; }
+    button.active { background: #e74c3c; }
+    input[type="range"] { width: 80px; }
+    #similarity { margin-top: 10px; }
+    #matchInfo {
+      background: #333;
+      padding: 10px;
+      border-radius: 5px;
+      margin-top: 10px;
+      min-height: 20px;
+      text-align: left;
+    }
+    #loadingStatus {
+      background: #444;
+      padding: 10px;
+      border-radius: 5px;
+      margin-top: 10px;
+      font-size: 14px;
+    }
+    #previewContainer {
+      position: relative;
+      display: inline-block;
+    }
+    #previewOverlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      pointer-events: none;
+      opacity: 0.7;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>Interactive Edge Process Viewer</h1>
+
+  <div id="container">
+    <div id="previewContainer">
+      <canvas id="canvas" width="512" height="512"></canvas>
+      <canvas id="previewOverlay" width="512" height="512"></canvas>
+    </div>
+    <canvas id="houghCanvas" width="512" height="512"></canvas>
+  </div>
+
+  <div id="controls">
+    <button id="randomBtn">Random Image</button>
+    <br/><br/>
+    <input type="range" id="stepSlider" min="0" max="5" value="0" />
+    <div id="stepLabel">Step: original</div>
+  </div>
+
+  <div id="houghControls">
+    <h3>Interactive Hough Space</h3>
+    <div id="drawingTools">
+      <div class="tool-group">
+        <button id="toggleDraw">Enable Drawing</button>
+        <button id="clearHough">Clear Drawing</button>
+      </div>
+      <div class="tool-group">
+        <label>Brush Size:</label>
+        <input type="range" id="brushSize" min="1" max="20" value="5" />
+        <span id="brushSizeLabel">5</span>
+      </div>
+      <div class="tool-group">
+        <label>Intensity:</label>
+        <input type="range" id="brushIntensity" min="10" max="255" value="128" />
+        <span id="brushIntensityLabel">128</span>
+      </div>
+    </div>
+    <button id="findSimilar">Find Most Similar Image</button>
+    <button id="showPreview">Show Edge Preview</button>
+    <div id="loadingStatus">Loading JSON files...</div>
+    <div id="matchInfo">Draw on the Hough space and click "Find Most Similar Image" to search</div>
+  </div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pako/2.1.0/pako.min.js"></script>
+  <script>
+    const PROCESSING_STEPS = [
+      'original','grayscale','gradient_magnitude','nonmaxima','hysteresis','canny_downscaled'
+    ];
+
+    // Canvas setup
+    const canvas = document.getElementById('canvas');
+    const ctx    = canvas.getContext('2d');
+    const width  = canvas.width, height = canvas.height;
+    const houghCanvas = document.getElementById('houghCanvas');
+    const houghCtx    = houghCanvas.getContext('2d');
+    const previewOverlay = document.getElementById('previewOverlay');
+    const previewCtx = previewOverlay.getContext('2d');
+
+    // Controls
+    const stepSlider   = document.getElementById('stepSlider');
+    const stepLabel    = document.getElementById('stepLabel');
+    const randomBtn    = document.getElementById('randomBtn');
+    const toggleDrawBtn    = document.getElementById('toggleDraw');
+    const clearHoughBtn    = document.getElementById('clearHough');
+    const brushSizeSlider    = document.getElementById('brushSize');
+    const brushSizeLabel     = document.getElementById('brushSizeLabel');
+    const brushIntensitySlider = document.getElementById('brushIntensity');
+    const brushIntensityLabel  = document.getElementById('brushIntensityLabel');
+    const findSimilarBtn    = document.getElementById('findSimilar');
+    const showPreviewBtn    = document.getElementById('showPreview');
+    const matchInfo         = document.getElementById('matchInfo');
+    const loadingStatus     = document.getElementById('loadingStatus');
+    
+
+    // Data holders
+    let dataKeys = [], allData = {}, currentKey = null;
+    let originalImg, edgesDownscaledImgData, grayImageData,
+        gradientMagnitudeData, nonmaxSuppressionData,
+        hysteresisData, houghImgData, originalHoughData,
+        userDrawnHoughData;
+    let isDrawing = false, drawingEnabled = false, showPreview = false;
+
+    // --- Helper functions (decode, processing, drawing) ---
+    function decodeBase64Gzip(encoded) {
+      const b64 = encoded.data;
+      const bin = atob(b64);
+      const len = bin.length;
+      const buf = new Uint8Array(len);
+      for(let i=0;i<len;i++) buf[i]=bin.charCodeAt(i);
+      return pako.inflate(buf);
+    }
+
+    function decodeArrayToUint8ClampedArray(encoded) {
+      const data = decodeBase64Gzip(encoded);
+      const [h,w] = encoded.shape;
+      return { data, width:w, height:h };
+    }
+
+    function toImageDataFromGray(grayArr,w,h) {
+      const img = ctx.createImageData(w,h);
+      for(let i=0;i<grayArr.length;i++){
+        const v=grayArr[i];
+        img.data[i*4]=v;
+        img.data[i*4+1]=v;
+        img.data[i*4+2]=v;
+        img.data[i*4+3]=255;
+      }
+      return img;
+    }
+
+    function rgbToGrayscale(imageData) {
+      const w=imageData.width, h=imageData.height;
+      const gray=new Uint8ClampedArray(w*h);
+      const d=imageData.data;
+      for(let i=0;i<w*h;i++){
+        gray[i]=0.299*d[i*4]+0.587*d[i*4+1]+0.114*d[i*4+2];
+      }
+      return gray;
+    }
+
+    function sobelFilter(gray,w,h){
+      const Kx=[-1,0,1,-2,0,2,-1,0,1], Ky=[-1,-2,-1,0,0,0,1,2,1];
+      const Ix=new Float32Array(w*h), Iy=new Float32Array(w*h);
+      for(let y=1;y<h-1;y++){
+        for(let x=1;x<w-1;x++){
+          let gx=0,gy=0;
+          for(let ky=-1;ky<=1;ky++){
+            for(let kx=-1;kx<=1;kx++){
+              const px=x+kx, py=y+ky, val=gray[py*w+px];
+              const idx=(ky+1)*3+(kx+1);
+              gx+=val*Kx[idx]; gy+=val*Ky[idx];
+            }
+          }
+          Ix[y*w+x]=gx; Iy[y*w+x]=gy;
+        }
+      }
+      return {Ix,Iy};
+    }
+
+    function gradientMagnitude(Ix,Iy){
+      const len=Ix.length, mag=new Uint8ClampedArray(len);
+      for(let i=0;i<len;i++){
+        mag[i]=Math.min(255,Math.sqrt(Ix[i]*Ix[i]+Iy[i]*Iy[i]));
+      }
+      return mag;
+    }
+
+    function gradientAngle(Ix,Iy){
+      const len=Ix.length, angle=new Float32Array(len);
+      for(let i=0;i<len;i++){
+        angle[i]=Math.atan2(Iy[i],Ix[i]);
+      }
+      return angle;
+    }
+
+    function nonMaximaSuppression(mag,angle,w,h){
+      const out=new Uint8ClampedArray(w*h);
+      for(let y=1;y<h-1;y++){
+        for(let x=1;x<w-1;x++){
+          const i=y*w+x;
+          let dir=(angle[i]*180/Math.PI+180)%180;
+          let n1=0,n2=0;
+          if((dir<22.5||dir>=157.5)){n1=mag[i-1];n2=mag[i+1];}
+          else if(dir<67.5){n1=mag[i-w+1];n2=mag[i+w-1];}
+          else if(dir<112.5){n1=mag[i-w];n2=mag[i+w];}
+          else{n1=mag[i-w-1];n2=mag[i+w+1];}
+          out[i]=(mag[i]>=n1&&mag[i]>=n2)?mag[i]:0;
+        }
+      }
+      return out;
+    }
+
+    function hysteresisThreshold(sup,w,h,low=0.04,high=0.16){
+      const ht=255*high, lt=255*low;
+      const strong=255, weak=75;
+      const res=new Uint8ClampedArray(w*h);
+      for(let i=0;i<w*h;i++){
+        if(sup[i]>=ht) res[i]=strong;
+        else if(sup[i]>=lt) res[i]=weak;
+      }
+      function hasStrongNeighbor(x,y){
+        for(let j=-1;j<=1;j++){
+          for(let i=-1;i<=1;i++){
+            if(i||j){
+              const nx=x+i, ny=y+j;
+              if(nx>=0&&nx<w&&ny>=0&&ny<h){
+                if(res[ny*w+nx]===strong) return true;
+              }
+            }
+          }
+        }
+        return false;
+      }
+      let changed=true;
+      while(changed){
+        changed=false;
+        for(let y=1;y<h-1;y++){
+          for(let x=1;x<w-1;x++){
+            const idx=y*w+x;
+            if(res[idx]===weak && hasStrongNeighbor(x,y)){
+              res[idx]=strong; changed=true;
+            }
+          }
+        }
+      }
+      for(let i=0;i<w*h;i++){
+        if(res[i]!==strong) res[i]=0;
+      }
+      return res;
+    }
+
+    // --- Drawing & Hough ---
+    function initializeUserDrawnHough(){
+      if(!originalHoughData) return;
+      const w=originalHoughData.width, h=originalHoughData.height;
+      userDrawnHoughData=ctx.createImageData(w,h);
+      for(let i=0;i<userDrawnHoughData.data.length;i+=4){
+        userDrawnHoughData.data.set([0,0,0,255],i);
+      }
+    }
+
+    function redrawHoughCanvas(){
+      houghCtx.clearRect(0,0,width,height);
+      if(originalHoughData){
+        const off=document.createElement('canvas');
+        off.width=originalHoughData.width; off.height=originalHoughData.height;
+        const offCtx=off.getContext('2d');
+        offCtx.putImageData(originalHoughData,0,0);
+        houghCtx.imageSmoothingEnabled=false;
+        houghCtx.drawImage(off,0,0,width,height);
+      }
+      if(drawingEnabled && userDrawnHoughData){
+        const off2=document.createElement('canvas');
+        off2.width=userDrawnHoughData.width; off2.height=userDrawnHoughData.height;
+        const offCtx2=off2.getContext('2d');
+        offCtx2.putImageData(userDrawnHoughData,0,0);
+        houghCtx.globalCompositeOperation='screen';
+        houghCtx.imageSmoothingEnabled=false;
+        houghCtx.drawImage(off2,0,0,width,height);
+        houghCtx.globalCompositeOperation='source-over';
+      }
+    }
+
+    function drawOnHough(x,y){
+      if(!drawingEnabled||!userDrawnHoughData) return;
+      const bSize=parseInt(brushSizeSlider.value);
+      const intensity=parseInt(brushIntensitySlider.value);
+      const scaleX=userDrawnHoughData.width/width;
+      const scaleY=userDrawnHoughData.height/height;
+      const hx=Math.floor(x*scaleX), hy=Math.floor(y*scaleY);
+      const w=userDrawnHoughData.width, h=userDrawnHoughData.height;
+      for(let dy=-bSize;dy<=bSize;dy++){
+        for(let dx=-bSize;dx<=bSize;dx++){
+          if(dx*dx+dy*dy<=bSize*bSize){
+            const nx=hx+dx, ny=hy+dy;
+            if(nx>=0&&nx<w&&ny>=0&&ny<h){
+              const idx=(ny*w+nx)*4;
+              userDrawnHoughData.data[idx]=intensity;
+              userDrawnHoughData.data[idx+1]=intensity;
+              userDrawnHoughData.data[idx+2]=intensity;
+              // alpha remains 255
+            }
+          }
+        }
+      }
+      redrawHoughCanvas();
+      if(showPreview) updateEdgePreview();
+    }
+
+    // Inverse Hough Transform to visualize drawn edges
+    function updateEdgePreview() {
+      if (!userDrawnHoughData || !originalImg.complete) return;
+      
+      previewCtx.clearRect(0, 0, width, height);
+      
+      // Create a temporary canvas for the Hough space
+      const houghCanvas = document.createElement('canvas');
+      houghCanvas.width = userDrawnHoughData.width;
+      houghCanvas.height = userDrawnHoughData.height;
+      const houghCtx = houghCanvas.getContext('2d');
+      houghCtx.putImageData(userDrawnHoughData, 0, 0);
+      
+      // Get the Hough space data
+      const houghData = houghCtx.getImageData(0, 0, houghCanvas.width, houghCanvas.height);
+      const houghWidth = houghCanvas.width;
+      const houghHeight = houghCanvas.height;
+      
+      // Parameters for Hough transform
+      const maxDist = Math.sqrt(width*width + height*height) / 2;
+      const thetaSteps = houghWidth;
+      const rhoSteps = houghHeight;
+      const dTheta = Math.PI / thetaSteps;
+      
+      // Create a buffer for the edge image
+      const edgeBuffer = new Uint8ClampedArray(width * height);
+      
+      // For each point in Hough space, draw the corresponding line in image space
+      for (let thetaIdx = 0; thetaIdx < thetaSteps; thetaIdx++) {
+        for (let rhoIdx = 0; rhoIdx < rhoSteps; rhoIdx++) {
+          const idx = (rhoIdx * thetaSteps + thetaIdx) * 4;
+          const intensity = houghData.data[idx]; // Using red channel
+          
+          if (intensity > 10) { // Only consider significant votes
+            const theta = thetaIdx * dTheta;
+            const rho = (rhoIdx / rhoSteps) * 2 * maxDist - maxDist;
+            
+            // Convert polar to cartesian
+            const cosTheta = Math.cos(theta);
+            const sinTheta = Math.sin(theta);
+            
+            // Draw the line in image space
+            if (Math.abs(sinTheta) > Math.abs(cosTheta)) {
+              // More vertical line
+              for (let y = 0; y < height; y++) {
+                const x = Math.round((rho - y * sinTheta) / cosTheta);
+                if (x >= 0 && x < width) {
+                  edgeBuffer[y * width + x] = Math.min(255, edgeBuffer[y * width + x] + intensity);
+                }
+              }
+            } else {
+              // More horizontal line
+              for (let x = 0; x < width; x++) {
+                const y = Math.round((rho - x * cosTheta) / sinTheta);
+                if (y >= 0 && y < height) {
+                  edgeBuffer[y * width + x] = Math.min(255, edgeBuffer[y * width + x] + intensity);
+                }
+              }
+            }
+          }
+        }
+      }
+      
+      // Create image data from the edge buffer
+      const edgeImgData = previewCtx.createImageData(width, height);
+      for (let i = 0; i < edgeBuffer.length; i++) {
+        const val = Math.min(255, edgeBuffer[i]);
+        edgeImgData.data[i*4] = 255; // Red
+        edgeImgData.data[i*4+1] = 0;
+        edgeImgData.data[i*4+2] = 0;
+        edgeImgData.data[i*4+3] = val; // Alpha based on intensity
+      }
+      
+      previewCtx.putImageData(edgeImgData, 0, 0);
+    }
+
+    // --- Search against server ---
+    async function findMostSimilarImage(){
+      if(!userDrawnHoughData){
+        matchInfo.textContent="Please draw on the Hough space first.";
+        return;
+      }
+      const w=userDrawnHoughData.width, h=userDrawnHoughData.height;
+      const arr=[];
+      for(let y=0;y<h;y++){
+        const row=[];
+        for(let x=0;x<w;x++){
+          row.push(userDrawnHoughData.data[(y*w+x)*4]);
+        }
+        arr.push(row);
+      }
+
+      matchInfo.textContent="Searching server for similar images...";
+      findSimilarBtn.disabled=true;
+      try{
+        const resp=await fetch('http://localhost:5000/search',{
+          method:'POST',
+          headers:{'Content-Type':'application/json'},
+          body:JSON.stringify({hough_data:arr, top_k:10, use_embeddings:true})
+        });
+        if(!resp.ok) throw new Error(`${resp.status} ${resp.statusText}`);
+        const data=await resp.json();
+        displayServerResults(data);
+      }catch(err){
+        matchInfo.textContent=`Search failed: ${err.message}`;
+      }finally{
+        findSimilarBtn.disabled=false;
+      }
+    }
+
+    function displayServerResults(data){
+      if(!data.results?.length){
+        matchInfo.innerHTML="No similar images found.";
+        return;
+      }
+      let html=`<strong>Search complete!</strong><br>`;
+      html+=`Top ${data.results.length} matches (time: ${data.search_time_ms} ms):<ul>`;
+      data.results.forEach((r, i) => {
+        // convert angular distance (0=identical, up to ~2) into a 0–100% similarity
+        const similarityPct = ((1 - r.distance) * 100).toFixed(2);
+        html += `<li><strong>#${i+1}</strong>: ${r.key} — Similarity: ${similarityPct}%<br>`;
+        html += `File: ${r.file}<br>Path: ${r.path}</li>`;
+      });
+      html+="</ul>";
+      matchInfo.innerHTML=html;
+
+      // load top match
+      const topKey=data.results[0].key;
+      currentKey=topKey;
+      if(!(topKey in allData)) return;
+      const entry=allData[topKey];
+      originalImg=new Image();
+      originalImg.crossOrigin="Anonymous";
+      originalImg.onload=()=>drawStep(parseInt(stepSlider.value));
+      originalImg.src=entry.path;
+      if(entry.hough_sinusoids){
+        const dec=decodeArrayToUint8ClampedArray(entry.hough_sinusoids);
+        originalHoughData=toImageDataFromGray(dec.data,dec.width,dec.height);
+        initializeUserDrawnHough();
+        redrawHoughCanvas();
+      }
+    }
+
+    // --- Loading JSON files locally ---
+    async function discoverJsonFiles(){
+      const folder='json_minimal_edges_base64/';
+      const files=[
+        'Abstract_Expressionism_part1.json',
+        'Action_painting_part1.json',
+        'Analytical_Cubism_part1.json',
+        'Art_Nouveau_Modern_part1.json',
+        'Art_Nouveau_Modern_part2.json',
+        'Baroque_part1.json',
+        'Baroque_part2.json',
+        'Color_Field_Painting_part1.json',
+        'Contemporary_Realism_part1.json',
+        'Cubism_part1.json',
+        'Early_Renaissance_part1.json',
+        'Expressionism_part1.json',
+        'Expressionism_part2.json',
+        'Fauvism_part1.json',
+        'High_Renaissance_part1.json',
+        'Impressionism_part1.json',
+        'Impressionism_part2.json',
+        'Impressionism_part3.json',
+        'Impressionism_part4.json',
+        'Impressionism_part5.json',
+        'Mannerism_Late_Renaissance_part1.json',
+        'Minimalism_part1.json',
+        'Naive_Art_Primitivism_part1.json',
+        'New_Realism_part1.json',
+        'Northern_Renaissance_part1.json',
+        'Northern_Renaissance_part2.json',
+        'Pointillism_part1.json',
+        'Pop_Art_part1.json',
+        'Post_Impressionism_part1.json',
+        'Post_Impressionism_part2.json',
+        'Post_Impressionism_part3.json',
+        'Realism_part1.json',
+        'Realism_part2.json',
+        'Realism_part3.json',
+        'Rococo_part1.json',
+        'Romanticism_part1.json',
+        'Romanticism_part2.json',
+        'Romanticism_part3.json',
+        'Symbolism_part1.json',
+        'Symbolism_part2.json',
+        'Synthetic_Cubism_part1.json',
+        'Ukiyo_e_part1.json'
+      ];
+      return files.map(f=>folder+f);
+    }
+
+    async function loadAllJsonFiles(){
+      loadingStatus.textContent="Discovering JSON files…";
+      const paths=await discoverJsonFiles();
+      let count=0, total=0;
+      for(const p of paths){
+        try{
+          loadingStatus.textContent=`Loading ${p}… (${count} files, ${total} images)`;
+          const res=await fetch(p);
+          if(!res.ok){ console.log(`Skipped ${p}`); continue; }
+          const data=await res.json();
+          Object.assign(allData,data);
+          count++; total+=Object.keys(data).length;
+          loadingStatus.innerHTML=`
+            <strong>Progress:</strong> ${count} files<br>
+            <strong>Total Images:</strong> ${total}<br>
+            <strong>Latest:</strong> ${p.split('/').pop()}
+          `;
+          await new Promise(r=>setTimeout(r,50));
+        }catch(e){
+          console.log(`Error loading ${p}: ${e}`);
+        }
+      }
+      dataKeys=Object.keys(allData);
+      if(total>0){
+        loadingStatus.innerHTML=`
+          <strong>✓ Loading Complete!</strong><br>
+          <strong>Files:</strong> ${count}<br>
+          <strong>Total Images:</strong> ${total}<br>
+          <strong>Ready for similarity search</strong>
+        `;
+        loadRandomImage();
+      } else {
+        loadingStatus.innerHTML="<strong>⚠️ No JSON files found</strong>";
+      }
+    }
+
+    function loadRandomImage(){
+      if(!dataKeys.length) return;
+      currentKey=dataKeys[Math.floor(Math.random()*dataKeys.length)];
+      const e=allData[currentKey];
+      stepSlider.value=0;
+      stepLabel.textContent='Step: original';
+      originalImg=new Image();
+      originalImg.crossOrigin="Anonymous";
+      originalImg.onload=()=>{
+        drawStep(0);
+        processImageSteps();
+        redrawHoughCanvas();
+      };
+      originalImg.onerror=()=>{
+        ctx.clearRect(0,0,width,height);
+        houghCtx.clearRect(0,0,width,height);
+      };
+      originalImg.src=e.path;
+
+      const dec=decodeArrayToUint8ClampedArray(e.edges_downscaled);
+      edgesDownscaledImgData=toImageDataFromGray(dec.data,dec.width,dec.height);
+
+      if(e.hough_sinusoids){
+        const hdec=decodeArrayToUint8ClampedArray(e.hough_sinusoids);
+        houghImgData=toImageDataFromGray(hdec.data,hdec.width,hdec.height);
+        originalHoughData=houghImgData;
+        initializeUserDrawnHough();
+      }
+      matchInfo.innerHTML=`
+        <strong>Current Image:</strong> ${currentKey}<br>
+        <strong>Dataset Size:</strong> ${dataKeys.length} images<br>
+        Draw on the Hough space and click 'Find Most Similar Image'
+      `;
+    }
+
+    function processImageSteps(){
+      ctx.clearRect(0,0,width,height);
+      ctx.drawImage(originalImg,0,0,width,height);
+      const img=ctx.getImageData(0,0,width,height);
+      grayImageData=toImageDataFromGray(rgbToGrayscale(img),width,height);
+      const {Ix,Iy}=sobelFilter(rgbToGrayscale(img),width,height);
+      gradientMagnitudeData=toImageDataFromGray(gradientMagnitude(Ix,Iy),width,height);
+      const nms=nonMaximaSuppression(gradientMagnitude(Ix,Iy),gradientAngle(Ix,Iy),width,height);
+      nonmaxSuppressionData=toImageDataFromGray(nms,width,height);
+      hysteresisData=toImageDataFromGray(hysteresisThreshold(nms,width,height),width,height);
+    }
+
+    function drawStep(idx){
+      ctx.clearRect(0,0,width,height);
+      switch(PROCESSING_STEPS[idx]){
+        case 'original':
+          if(originalImg.complete) ctx.drawImage(originalImg,0,0,width,height);
+          break;
+        case 'grayscale':
+          if(grayImageData) ctx.putImageData(grayImageData,0,0);
+          break;
+        case 'gradient_magnitude':
+          if(gradientMagnitudeData) ctx.putImageData(gradientMagnitudeData,0,0);
+          break;
+        case 'nonmaxima':
+          if(nonmaxSuppressionData) ctx.putImageData(nonmaxSuppressionData,0,0);
+          break;
+        case 'hysteresis':
+          if(hysteresisData) ctx.putImageData(hysteresisData,0,0);
+          break;
+        case 'canny_downscaled':
+          if(edgesDownscaledImgData){
+            const off=document.createElement('canvas');
+            off.width=edgesDownscaledImgData.width;
+            off.height=edgesDownscaledImgData.height;
+            off.getContext('2d').putImageData(edgesDownscaledImgData,0,0);
+            ctx.imageSmoothingEnabled=false;
+            ctx.drawImage(off,0,0,width,height);
+            ctx.imageSmoothingEnabled=true;
+          }
+          break;
+      }
+    }
+
+    // --- Event listeners ---
+    stepSlider.addEventListener('input',e=>{
+      const v=parseInt(e.target.value);
+      stepLabel.textContent=`Step: ${PROCESSING_STEPS[v]}`;
+      drawStep(v);
+    });
+    randomBtn.addEventListener('click',loadRandomImage);
+    toggleDrawBtn.addEventListener('click',()=>{
+      drawingEnabled=!drawingEnabled;
+      toggleDrawBtn.textContent = drawingEnabled ? 'Disable Drawing' : 'Enable Drawing';
+      toggleDrawBtn.classList.toggle('active',drawingEnabled);
+      houghCanvas.classList.toggle('drawing',drawingEnabled);
+      if(drawingEnabled) initializeUserDrawnHough();
+      redrawHoughCanvas();
+    });
+    clearHoughBtn.addEventListener('click',()=>{
+      initializeUserDrawnHough();
+      redrawHoughCanvas();
+      matchInfo.textContent="Drawing cleared. Draw and click 'Find Most Similar'";
+      previewCtx.clearRect(0, 0, width, height);
+    });
+    brushSizeSlider.addEventListener('input',e=>brushSizeLabel.textContent=e.target.value);
+    brushIntensitySlider.addEventListener('input',e=>brushIntensityLabel.textContent=e.target.value);
+    findSimilarBtn.addEventListener('click',findMostSimilarImage);
+    showPreviewBtn.addEventListener('click',()=>{
+      showPreview = !showPreview;
+      showPreviewBtn.textContent = showPreview ? 'Hide Edge Preview' : 'Show Edge Preview';
+      showPreviewBtn.classList.toggle('active', showPreview);
+      if (showPreview) {
+        updateEdgePreview();
+      } else {
+        previewCtx.clearRect(0, 0, width, height);
+      }
+    });
+    houghCanvas.addEventListener('mousedown',e=>{
+      if(!drawingEnabled) return;
+      isDrawing=true;
+      const r=houghCanvas.getBoundingClientRect();
+      drawOnHough(e.clientX-r.left,e.clientY-r.top);
+    });
+    houghCanvas.addEventListener('mousemove',e=>{
+      if(drawingEnabled && isDrawing){
+        const r=houghCanvas.getBoundingClientRect();
+        drawOnHough(e.clientX-r.left,e.clientY-r.top);
+      }
+    });
+    ['mouseup','mouseleave'].forEach(evt=>{
+      houghCanvas.addEventListener(evt,()=> isDrawing=false);
+    });
+
+    // --- Poll server readiness ---
+    findSimilarBtn.disabled = true;
+    async function checkServerReady(){
+      try{
+        const res=await fetch('http://localhost:5000/status');
+        if(!res.ok) throw new Error(res.statusText);
+        const {loading_complete} = await res.json();
+        if(loading_complete){
+          loadingStatus.textContent = '✓ Server ready for similarity search';
+          findSimilarBtn.disabled = false;
+          clearInterval(statusInterval);
+        } else {
+          loadingStatus.textContent = 'Computing embeddings, please wait…';
+        }
+      }catch(err){
+        loadingStatus.textContent = `Error checking server status: ${err.message}`;
+      }
+    }
+    const statusInterval = setInterval(checkServerReady,2000);
+    checkServerReady();
+
+    // --- Initialize data loading ---
+    loadAllJsonFiles();
+
+  </script>
+</body>
+</html>
