@@ -4,3 +4,4 @@ yolo*.pt
 /pickles_edges_by_style
 
 /pickles/hough.ann
+/wikiart.zip
