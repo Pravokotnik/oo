@@ -4,80 +4,195 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Interactive Edge Process Viewer</title>
-  <style>
-    body { font-family: Arial, sans-serif; background: #222; color: #eee; text-align: center; }
+    <style>
+    /* Root Variables */
+    :root {
+        --bg-color: #1e1e2e;
+        --card-bg: #2a2a3e;
+        --accent: #7f5af0;
+        --accent-hover: #6d4de0;
+        --text: #e0def4;
+        --subtext: #a6adc8;
+        --border: #3e3e5e;
+        --radius: 10px;
+        --transition: 0.2s;
+    }
+
+    /* Reset & Base */
+    *, *::before, *::after {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+    }
+    body {
+        font-family: 'Segoe UI', Tahoma, sans-serif;
+        background: var(--bg-color);
+        color: var(--text);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        min-height: 100vh;
+        padding: 20px;
+    }
+    h1 {
+        font-size: 2rem;
+        margin-bottom: 10px;
+        text-transform: uppercase;
+        letter-spacing: 2px;
+    }
+
+    /* Layout */
     #container {
-      display: flex;
-      justify-content: center;
-      gap: 20px;
-      margin-top: 20px;
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 20px;
+        margin: 20px 0;
     }
-    canvas { border: 1px solid #555; }
-    #houghCanvas { cursor: crosshair; }
-    #houghCanvas.drawing { cursor: none; }
-    #canvas.drawing { cursor: crosshair; }
-    #controls { margin: 10px auto; width: 600px; }
-    #stepLabel { font-weight: bold; }
-    #houghControls {
-      margin: 15px auto;
-      padding: 15px;
-      background: #333;
-      border-radius: 8px;
-      width: 600px;
-    }
-    #drawingTools {
-      display: flex;
-      gap: 10px;
-      align-items: center;
-      justify-content: center;
-      margin: 10px 0;
-    }
-    .tool-group {
-      display: flex;
-      gap: 5px;
-      align-items: center;
-    }
-    button {
-      padding: 8px 16px;
-      background: #4a90e2;
-      color: white;
-      border: none;
-      border-radius: 4px;
-      cursor: pointer;
-      font-size: 14px;
-    }
-    button:hover { background: #357abd; }
-    button:disabled { background: #666; cursor: not-allowed; }
-    button.active { background: #e74c3c; }
-    input[type="range"] { width: 80px; }
-    #similarity { margin-top: 10px; }
-    #matchInfo {
-      background: #333;
-      padding: 10px;
-      border-radius: 5px;
-      margin-top: 10px;
-      min-height: 20px;
-      text-align: left;
-    }
-    #loadingStatus {
-      background: #444;
-      padding: 10px;
-      border-radius: 5px;
-      margin-top: 10px;
-      font-size: 14px;
-    }
+
+    /* Preview stack */
     #previewContainer {
-      position: relative;
-      display: inline-block;
+        position: relative;
+        width: 512px;
+        height: 512px;
     }
+
+    /* Main canvases */
+    #canvas,
+    #houghCanvas {
+        border: 2px solid var(--border);
+        border-radius: var(--radius);
+        background: var(--card-bg);
+        cursor: crosshair;
+        display: block;
+    }
+
+    /* Overlay canvas */
     #previewOverlay {
-      position: absolute;
-      top: 0;
-      left: 0;
-      pointer-events: none;
-      opacity: 0.7;
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 512px;
+        height: 512px;
+        pointer-events: none;
+        z-index: 2;
+        background: transparent;
     }
-  </style>
+
+    /* Ensure base canvas is underneath */
+    #canvas {
+        position: relative;
+        z-index: 1;
+    }
+
+    /* Controls Panel */
+    .panel,
+    #controls, /* if you didn't wrap controls in .panel */
+    #houghControls {
+        background: var(--card-bg);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        padding: 15px;
+        margin-bottom: 20px;
+        width: 600px;
+        color: var(--text);
+    }
+    .panel h3 {
+        margin-bottom: 10px;
+        color: var(--accent);
+    }
+
+    /* Buttons */
+    button {
+        background: var(--accent);
+        color: #fff;
+        border: none;
+        border-radius: var(--radius);
+        padding: 8px 16px;
+        margin: 5px;
+        font-size: 0.9rem;
+        cursor: pointer;
+        transition: background var(--transition);
+    }
+    button:hover:not(:disabled) {
+        background: var(--accent-hover);
+    }
+    button:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+    }
+    button.active {
+        background: #f43f5e;
+    }
+
+    /* Range Inputs */
+    .slider-group {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin: 10px 0;
+    }
+    .slider-group label {
+        flex: 0 0 80px;
+        color: var(--subtext);
+    }
+    input[type="range"] {
+        -webkit-appearance: none;
+        width: 100%;
+        height: 6px;
+        background: var(--border);
+        border-radius: 5px;
+        outline: none;
+        transition: opacity .2s;
+    }
+    input[type="range"]::-webkit-slider-thumb {
+        -webkit-appearance: none;
+        appearance: none;
+        width: 14px;
+        height: 14px;
+        border-radius: 50%;
+        background: var(--accent);
+        cursor: pointer;
+        transition: background var(--transition);
+    }
+    input[type="range"]::-webkit-slider-thumb:hover {
+        background: var(--accent-hover);
+    }
+
+    /* Info Text */
+    #matchInfo, #loadingStatus {
+        background: var(--bg-color);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        padding: 10px;
+        margin-top: 10px;
+        font-size: 0.9rem;
+        color: var(--subtext);
+        text-align: left;
+        max-height: 120px;
+        overflow-y: auto;
+    }
+
+    /* Step Label */
+    #stepLabel {
+        margin-top: 5px;
+        font-weight: bold;
+        text-transform: capitalize;
+        color: var(--accent);
+    }
+
+    /* Responsive */
+    @media (max-width: 1300px) {
+        #container {
+        grid-template-columns: 1fr;
+        }
+        .panel,
+        #controls,
+        #houghControls {
+        width: 100%;
+        }
+    }
+    </style>
+
 </head>
 <body>
 
