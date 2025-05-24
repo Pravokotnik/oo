@@ -2,3 +2,5 @@
 yolo*.pt
 /pickles_by_style
 /pickles_edges_by_style
+
+/pickles/hough.ann

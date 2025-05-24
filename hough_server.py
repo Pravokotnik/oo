@@ -6,11 +6,11 @@ import base64
 import numpy as np
 from flask import Flask, request, jsonify
 from flask_cors import CORS
-from sklearn.decomposition import PCA
-from sklearn.metrics.pairwise import cosine_similarity
+from annoy import AnnoyIndex
 import threading
 import logging
 import time
+import pickle
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
@@ -19,141 +19,123 @@ app = Flask(__name__)
 CORS(app)
 
 class HoughDatabase:
-    def __init__(self, json_folder="json_minimal_edges_base64"):
+    def __init__(self,
+                 json_folder="json_minimal_edges_base64",
+                 ann_file="pickles/hough.ann",
+                 meta_file="pickles/hough_meta.pkl",
+                 n_trees=10):
         self.json_folder = json_folder
-        self.hough_data = {}    # key: image key, value: numpy 2D array (uint8)
-        self.metadata = {}      # key: image key, value: dict (e.g. path, filename)
-        self.flattened = None   # numpy 2D array: each row is flattened hough
+        self.ann_file = ann_file
+        self.meta_file = meta_file
+        self.n_trees = n_trees
         self.keys = []
-        self.embeddings = None
-        self.pca = None
+        self.metadata = {}
+        self.index = None
         self.loading_complete = threading.Event()
         threading.Thread(target=self.load_all_data, daemon=True).start()
 
     def decode_base64_gzip(self, encoded):
-        b64data = encoded['data']
-        compressed = base64.b64decode(b64data)
+        data_b64 = encoded['data']
+        compressed = base64.b64decode(data_b64)
         decompressed = gzip.decompress(compressed)
         arr = np.frombuffer(decompressed, dtype=np.uint8)
-        shape = encoded['shape']
-        return arr.reshape(shape)
+        return arr.reshape(encoded['shape'])
 
     def load_all_data(self):
-        logger.info(f"Loading JSON files from folder: {self.json_folder}")
-        if not os.path.exists(self.json_folder):
-            logger.error(f"Folder '{self.json_folder}' does not exist!")
+        # Try loading precomputed files
+        if os.path.exists(self.ann_file) and os.path.exists(self.meta_file):
+            logger.info("Loading precomputed Annoy index and metadata...")
+            with open(self.meta_file, 'rb') as f:
+                meta = pickle.load(f)
+            self.keys = meta['keys']
+            self.metadata = meta['metadata']
+            dim = meta['dim']
+            self.index = AnnoyIndex(dim, metric='angular')
+            self.index.load(self.ann_file)
+            logger.info(f"Loaded {len(self.keys)} items from precomputed index.")
             self.loading_complete.set()
             return
-        total_images = 0
-        for filename in os.listdir(self.json_folder):
+
+        # Fallback: build from JSON
+        logger.info(f"Precomputed files missing. Building index from JSON in '{self.json_folder}'...")
+        if not os.path.exists(self.json_folder):
+            logger.error(f"JSON folder '{self.json_folder}' not found.")
+            self.loading_complete.set()
+            return
+
+        hough_vectors = []
+        for filename in sorted(os.listdir(self.json_folder)):
             if not filename.endswith('.json'):
                 continue
-            filepath = os.path.join(self.json_folder, filename)
+            path = os.path.join(self.json_folder, filename)
             try:
-                with open(filepath, 'r') as f:
+                with open(path, 'r') as f:
                     data = json.load(f)
-                count = 0
                 for key, val in data.items():
                     if 'hough_sinusoids' in val:
-                        try:
-                            hough_arr = self.decode_base64_gzip(val['hough_sinusoids'])
-                            self.hough_data[key] = hough_arr
-                            self.metadata[key] = {
-                                'path': val.get('path', ''),
-                                'file': filename
-                            }
-                            count += 1
-                        except Exception as e:
-                            logger.warning(f"Error decoding {key}: {e}")
-                total_images += count
-                logger.info(f"Loaded {count} images from {filename}")
+                        arr = self.decode_base64_gzip(val['hough_sinusoids'])
+                        hough_vectors.append(arr.flatten().astype(np.float32))
+                        self.keys.append(key)
+                        self.metadata[key] = {'path': val.get('path',''), 'file': filename}
             except Exception as e:
-                logger.error(f"Failed to load {filename}: {e}")
+                logger.warning(f"Skipping {filename}: {e}")
 
-        self.keys = list(self.hough_data.keys())
-        if total_images == 0:
-            logger.warning("No images loaded. Ensure JSON files have correct data.")
+        if not hough_vectors:
+            logger.error("No Hough data found in JSON files.")
             self.loading_complete.set()
             return
 
-        # Precompute flattened arrays
-        first_shape = next(iter(self.hough_data.values())).shape
-        self.flattened = np.zeros((total_images, first_shape[0]*first_shape[1]), dtype=np.uint8)
-        for i, key in enumerate(self.keys):
-            self.flattened[i] = self.hough_data[key].flatten()
+        # Build the Annoy index
+        stacked = np.vstack(hough_vectors)
+        dim = stacked.shape[1]
+        self.index = AnnoyIndex(dim, metric='angular')
+        for i, vec in enumerate(stacked):
+            self.index.add_item(i, vec)
+        # Ensure output directory exists
+        os.makedirs(os.path.dirname(self.ann_file), exist_ok=True)
+        self.index.build(self.n_trees)
+        self.index.save(self.ann_file)
 
-        # Create PCA embeddings for fast search (optional)
-        logger.info("Computing PCA embeddings for faster similarity search...")
-        self.pca = PCA(n_components=min(256, self.flattened.shape[1]))
-        float_data = self.flattened.astype(np.float32)
-        self.embeddings = self.pca.fit_transform(float_data)
+        # Save metadata for future loads
+        meta = {'keys': self.keys, 'metadata': self.metadata, 'dim': dim}
+        with open(self.meta_file, 'wb') as f:
+            pickle.dump(meta, f)
+        logger.info(f"Built and saved index ({len(self.keys)} items, dim={dim}) to '{self.ann_file}' and metadata to '{self.meta_file}'")
 
         self.loading_complete.set()
-        logger.info(f"Loaded total {total_images} images and ready for search.")
 
-    def find_similar(self, query_array, top_k=10, use_embeddings=True):
+    def find_similar(self, query_array, top_k=10):
         if not self.loading_complete.is_set():
             return []
-
-        query_flat = query_array.flatten().astype(np.float32).reshape(1, -1)
-
-        if use_embeddings and self.embeddings is not None and self.pca is not None:
-            query_emb = self.pca.transform(query_flat)
-            sims = cosine_similarity(query_emb, self.embeddings)[0]
-        else:
-            data_float = self.flattened.astype(np.float32)
-            query_norm = np.linalg.norm(query_flat)
-            data_norms = np.linalg.norm(data_float, axis=1)
-            if query_norm == 0:
-                sims = np.zeros(len(self.keys))
-            else:
-                dots = np.dot(data_float, query_flat.T).flatten()
-                sims = dots / (data_norms * query_norm + 1e-8)
-
-        top_indices = np.argsort(sims)[-top_k:][::-1]
+        q = query_array.flatten().astype(np.float32)
+        idxs, dists = self.index.get_nns_by_vector(q, top_k, include_distances=True)
         results = []
-        for idx in top_indices:
+        for idx, dist in zip(idxs, dists):
             key = self.keys[idx]
-            results.append({
-                'key': key,
-                'similarity': float(sims[idx]),
-                'path': self.metadata[key]['path'],
-                'file': self.metadata[key]['file']
-            })
+            results.append({'key': key, 'distance': float(dist), 'path': self.metadata[key]['path'], 'file': self.metadata[key]['file']})
         return results
 
-
-db = HoughDatabase()
+# Instantiate database
+HDB = HoughDatabase()
 
 @app.route('/status')
 def status():
-    return jsonify({
-        'loading_complete': db.loading_complete.is_set(),
-        'total_images': len(db.keys),
-        'has_embeddings': db.embeddings is not None
-    })
+    return jsonify({'loading_complete': HDB.loading_complete.is_set(), 'total_images': len(HDB.keys)})
 
 @app.route('/search', methods=['POST'])
 def search():
-    if not db.loading_complete.is_set():
+    if not HDB.loading_complete.is_set():
         return jsonify({'error': 'Database still loading'}), 503
-    data = request.json
+    data = request.get_json()
     if 'hough_data' not in data:
         return jsonify({'error': 'Missing hough_data'}), 400
+    query = np.array(data['hough_data'], dtype=np.uint8)
     top_k = data.get('top_k', 10)
-    use_embeddings = data.get('use_embeddings', True)
-
-    query_data = np.array(data['hough_data'], dtype=np.uint8)
     start = time.time()
-    results = db.find_similar(query_data, top_k=top_k, use_embeddings=use_embeddings)
-    search_time = time.time() - start
-    return jsonify({
-        'results': results,
-        'search_time_ms': round(search_time * 1000, 2),
-        'total_images_searched': len(db.keys),
-        'method': 'embeddings' if use_embeddings else 'vectorized'
-    })
+    results = HDB.find_similar(query, top_k=top_k)
+    elapsed = (time.time() - start) * 1000
+    return jsonify({'results': results, 'search_time_ms': round(elapsed, 2)})
 
 if __name__ == '__main__':
-    print("Starting Hough Similarity Search Server on http://localhost:5000")
+    print("Starting Hough Similarity Search Server with precomputed Annoy index on http://localhost:5000")
     app.run(host='0.0.0.0', port=5000, threaded=True)

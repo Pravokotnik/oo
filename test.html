@@ -368,9 +368,11 @@
       }
       let html=`<strong>Search complete!</strong><br>`;
       html+=`Top ${data.results.length} matches (time: ${data.search_time_ms} ms):<ul>`;
-      data.results.forEach((r,i)=>{
-        html+=`<li><strong>#${i+1}</strong>: ${r.key} — ${(r.similarity*100).toFixed(2)}%<br>`;
-        html+=`File: ${r.file}<br>Path: ${r.path}</li>`;
+      data.results.forEach((r, i) => {
+        // convert angular distance (0=identical, up to ~2) into a 0–100% similarity
+        const similarityPct = ((1 - r.distance) * 100).toFixed(2);
+        html += `<li><strong>#${i+1}</strong>: ${r.key} — Similarity: ${similarityPct}%<br>`;
+        html += `File: ${r.file}<br>Path: ${r.path}</li>`;
       });
       html+="</ul>";
       matchInfo.innerHTML=html;

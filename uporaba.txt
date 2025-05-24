@@ -1,3 +1,6 @@
+pozeni precompute_annoy.py
+
+
 python hough_server.py
 
 
