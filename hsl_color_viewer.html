@@ -2,97 +2,23 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>HSL Color Viewer 16x16</title>
+  <title>HSL Color Viewer</title>
   <style>
     body { background: #111; color: white; font-family: sans-serif; text-align: center; }
     #slider-container { margin: 20px; }
     input[type=range] { width: 60%; }
-    #grid {
-      display: grid;
-      grid-template-columns: repeat(16, 60px);
-      gap: 2px;
-      justify-content: center;
-    }
-    .tile img {
-      width: 60px;
-      height: 60px;
-      object-fit: cover;
-      display: block;
-    }
-    .tile {
-      border: 1px solid #333;
-      background: #222;
-    }
+    #grid { display: grid; grid-template-columns: repeat(16, 60px); gap: 2px; justify-content: center; }
+    .tile img { width: 60px; height: 60px; object-fit: cover; }
+    .tile { width: 60px; height: 60px; background: white; border: 1px solid #555; }
   </style>
 </head>
 <body>
-
-  <h1>HSL Color Viewer (16x16)</h1>
-
+  <h1>HSL Color Viewer</h1>
   <div id="slider-container">
     <label for="hueSlider">Hue: <span id="hueValue">0</span>°</label><br />
-    <input type="range" id="hueSlider" min="0" max="359" value="0" />
+    <input type="range" id="hueSlider" min="0" max="360" value="0" />
   </div>
-
   <div id="grid"></div>
-
-  <script>
-    const folderPath = 'mean_colors/';
-    const styleNames = [
-      'Abstract_Expressionism', 'Art_Nouveau_Modern', 'Baroque', 'Cubism', 'Expressionism',
-      'Fauvism', 'Impressionism', 'Minimalism', 'Pop_Art', 'Post_Impressionism',
-      'Realism', 'Renaissance', 'Romanticism', 'Surrealism', 'Symbolism'
-    ];
-
-    const hueSlider = document.getElementById('hueSlider');
-    const hueValue = document.getElementById('hueValue');
-    const grid = document.getElementById('grid');
-    let allImages = [];
-
-    function hueDistance(h1, h2) {
-      const d = Math.abs(h1 - h2);
-      return Math.min(d, 360 - d);
-    }
-
-    function renderGrid(hue) {
-      grid.innerHTML = '';
-      const sorted = [...allImages].sort((a, b) => hueDistance(a.h, hue) - hueDistance(b.h, hue));
-      const topImages = sorted.slice(0, 256); // 16x16
-
-      for (const entry of topImages) {
-        const div = document.createElement('div');
-        div.className = 'tile';
-        const img = document.createElement('img');
-        img.src = entry.path;
-        img.title = `H:${entry.h.toFixed(1)}, S:${(entry.s*100).toFixed(0)}%, V:${(entry.v*100).toFixed(0)}%`;
-        div.appendChild(img);
-        grid.appendChild(div);
-      }
-    }
-
-    async function loadAllJsons() {
-      for (const style of styleNames) {
-        const filePath = `${folderPath}${style}.json`;
-        try {
-          const res = await fetch(filePath);
-          const json = await res.json();
-          allImages.push(...Object.values(json));
-        } catch (err) {
-          console.warn(`Failed to load: ${filePath}`);
-        }
-      }
-      renderGrid(parseInt(hueSlider.value));
-    }
-
-    hueSlider.addEventListener('input', () => {
-      const hue = parseInt(hueSlider.value);
-      hueValue.textContent = hue;
-      renderGrid(hue);
-    });
-
-    loadAllJsons();
-  </script>
-
+  <script src="hsl_viewer.js"></script>
 </body>
 </html>
