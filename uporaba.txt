@@ -9,4 +9,4 @@ python -m http.server 8000
 
 
 
-http://localhost:8000/test.html
+http://localhost:8000/hough.html

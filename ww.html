@@ -195,53 +195,49 @@
 
 </head>
 <body>
-  <h1>Edge Process Viewer</h1>
+
+  <h1>Interactive Edge Process Viewer</h1>
+
   <div id="container">
-    <div>
+    <div id="previewContainer">
       <canvas id="canvas" width="512" height="512"></canvas>
       <canvas id="previewOverlay" width="512" height="512"></canvas>
-      <div id="stepLabel">Step: original</div>
     </div>
-    <div>
-      <canvas id="houghCanvas" width="512" height="512"></canvas>
-    </div>
+    <canvas id="houghCanvas" width="512" height="512"></canvas>
   </div>
 
-  <div class="panel" id="controls">
-    <button id="randomBtn">🔄 Random Image</button>
-    <div class="slider-group">
-      <label for="stepSlider">Process Step:</label>
-      <input type="range" id="stepSlider" min="0" max="5" value="0" />
-    </div>
+  <div id="controls">
+    <button id="randomBtn">Random Image</button>
+    <br/><br/>
+    <input type="range" id="stepSlider" min="0" max="5" value="0" />
+    <div id="stepLabel">Step: original</div>
   </div>
 
-  <div class="panel" id="houghControls">
+  <div id="houghControls">
     <h3>Interactive Hough Space</h3>
-    <div class="slider-group">
-      <label for="brushSize">Brush Size:</label>
-      <input type="range" id="brushSize" min="1" max="20" value="5" />
-      <span id="brushSizeLabel">5</span>
+    <div id="drawingTools">
+      <div class="tool-group">
+        <button id="toggleDraw">Enable Drawing</button>
+        <button id="clearHough">Clear Drawing</button>
+        <button id="toggleDrawMode">Draw on Hough</button>
+      </div>
+      <div class="tool-group">
+        <label>Brush Size:</label>
+        <input type="range" id="brushSize" min="1" max="20" value="5" />
+        <span id="brushSizeLabel">5</span>
+      </div>
+      <div class="tool-group">
+        <label>Intensity:</label>
+        <input type="range" id="brushIntensity" min="10" max="255" value="128" />
+        <span id="brushIntensityLabel">128</span>
+      </div>
     </div>
-    <div class="slider-group">
-      <label for="brushIntensity">Intensity:</label>
-      <input type="range" id="brushIntensity" min="10" max="255" value="128" />
-      <span id="brushIntensityLabel">128</span>
-    </div>
-    <div>
-      <button id="toggleDraw">✏️ Enable Drawing</button>
-      <button id="clearHough">🗑️ Clear</button>
-      <button id="toggleDrawMode">🖼️ Draw on Image</button>
-    </div>
-    <div style="margin-top:10px;">
-      <button id="findSimilar">🔍 Find Similar</button>
-      <button id="showPreview">👁️ Preview Edges</button>
-    </div>
-    <div id="loadingStatus">Loading data...</div>
-    <div id="matchInfo">Draw on the Hough space and click "Find Similar"</div>
+    <button id="findSimilar">Find Most Similar Image</button>
+    <button id="showPreview">Show Edge Preview</button>
+    <div id="loadingStatus">Loading JSON files...</div>
+    <div id="matchInfo">Draw on the Hough space and click "Find Most Similar Image" to search</div>
   </div>
 
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/pako/2.1.0/pako.min.js"></script>
-  
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pako/2.1.0/pako.min.js"></script>
   <script>
     const PROCESSING_STEPS = [
@@ -801,7 +797,6 @@
       originalImg=new Image();
       originalImg.crossOrigin="Anonymous";
       originalImg.onload=()=>{
-        console.log("Image loaded:", originalImg.src);
         drawStep(0);
         processImageSteps();
         redrawHoughCanvas();
