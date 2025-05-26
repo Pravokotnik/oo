@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Object Viewer</title>
+  <style>
+    body {
+      background: #000;
+      margin: 0;
+      overflow: hidden;
+      color: #fff;
+      font-family: sans-serif;
+    }
+    canvas {
+      display: block;
+      margin: auto;
+      background: #111;
+    }
+    #toolbar {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      z-index: 10;
+    }
+    select {
+      padding: 5px;
+    }
+  </style>
+</head>
+<body>
+  <div id="toolbar">
+    <label for="classSelect">Class:</label>
+    <select id="classSelect"></select>
+  </div>
+  <canvas id="canvas" width="960" height="540"></canvas>
+  <script src="detect_objects_viewer.js"></script>
+</body>
+</html>
