@@ -101,96 +101,345 @@
         color: var(--accent);
     }
 
-    /* Buttons */
-    button {
-        background: var(--accent);
-        color: #fff;
-        border: none;
-        border-radius: var(--radius);
-        padding: 8px 16px;
-        margin: 5px;
-        font-size: 0.9rem;
-        cursor: pointer;
-        transition: background var(--transition);
-    }
-    button:hover:not(:disabled) {
-        background: var(--accent-hover);
-    }
-    button:disabled {
-        opacity: 0.5;
-        cursor: not-allowed;
-    }
-    button.active {
-        background: #f43f5e;
-    }
+    /* Add these styles to your existing CSS */
+.app-controls {
+  width: 100%;
+  max-width: 1050px;
+  margin: 0 auto;
+}
 
-    /* Range Inputs */
-    .slider-group {
-        display: flex;
-        align-items: center;
-        gap: 10px;
-        margin: 10px 0;
-    }
-    .slider-group label {
-        flex: 0 0 80px;
-        color: var(--subtext);
-    }
-    input[type="range"] {
-        -webkit-appearance: none;
-        width: 100%;
-        height: 6px;
-        background: var(--border);
-        border-radius: 5px;
-        outline: none;
-        transition: opacity .2s;
-    }
-    input[type="range"]::-webkit-slider-thumb {
-        -webkit-appearance: none;
-        appearance: none;
-        width: 14px;
-        height: 14px;
-        border-radius: 50%;
-        background: var(--accent);
-        cursor: pointer;
-        transition: background var(--transition);
-    }
-    input[type="range"]::-webkit-slider-thumb:hover {
-        background: var(--accent-hover);
-    }
+.control-panel {
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 20px;
+  margin-bottom: 20px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 20px;
+  box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+}
 
-    /* Info Text */
-    #matchInfo, #loadingStatus {
-        background: var(--bg-color);
-        border: 1px solid var(--border);
-        border-radius: var(--radius);
-        padding: 10px;
-        margin-top: 10px;
-        font-size: 0.9rem;
-        color: var(--subtext);
-        text-align: left;
-        max-height: 120px;
-        overflow-y: auto;
-    }
+.panel-section {
+  flex: 1;
+  min-width: 300px;
+  background: rgba(0,0,0,0.15);
+  border-radius: var(--radius);
+  padding: 15px;
+  border-left: 3px solid var(--accent);
+}
 
-    /* Step Label */
-    #stepLabel {
-        margin-top: 5px;
-        font-weight: bold;
-        text-transform: capitalize;
-        color: var(--accent);
-    }
+.panel-section h3 {
+  color: var(--accent);
+  margin-top: 0;
+  margin-bottom: 15px;
+  font-size: 1rem;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 8px;
+}
 
-    /* Responsive */
-    @media (max-width: 1300px) {
-        #container {
-        grid-template-columns: 1fr;
-        }
-        .panel,
-        #controls,
-        #houghControls {
-        width: 100%;
-        }
-    }
+.btn-group {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 15px;
+  flex-wrap: wrap;
+}
+
+/* Button styles with visual feedback */
+.primary-btn, .action-btn, .danger-btn, .secondary-btn {
+  padding: 8px 12px;
+  border: none;
+  border-radius: var(--radius);
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: 1;
+  justify-content: center;
+}
+
+.primary-btn {
+  background: var(--accent);
+  color: white;
+}
+
+.primary-btn:hover:not(:disabled) {
+  background: var(--accent-hover);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+}
+
+.action-btn {
+  background: #2c6aa1;
+  color: white;
+}
+
+.action-btn:hover:not(:disabled) {
+  background: #3579b5;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+}
+
+.danger-btn {
+  background: #a13c3c;
+  color: white;
+}
+
+.danger-btn:hover:not(:disabled) {
+  background: #bd4444;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+}
+
+.secondary-btn {
+  background: rgba(127, 90, 240, 0.2);
+  color: var(--text);
+}
+
+.secondary-btn:hover:not(:disabled) {
+  background: rgba(127, 90, 240, 0.3);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+}
+
+button:active {
+  transform: translateY(0) !important;
+  box-shadow: none !important;
+}
+
+button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none !important;
+  box-shadow: none !important;
+}
+
+button.active {
+  background: #f43f5e;
+  box-shadow: inset 0 0 5px rgba(0,0,0,0.3);
+}
+
+.icon {
+  font-style: normal;
+  font-size: 1.1em;
+}
+
+/* Tool settings */
+.tool-settings {
+  background: rgba(0,0,0,0.2);
+  border-radius: var(--radius);
+  padding: 12px;
+}
+
+.slider-container {
+  margin: 15px 0;
+}
+
+.slider-group {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 10px 0;
+}
+
+.slider-group label {
+  flex: 0 0 80px;
+  color: var(--subtext);
+  font-size: 0.9rem;
+}
+
+/* Visual indicators */
+.badge {
+  display: inline-block;
+  background: var(--accent);
+  color: white;
+  padding: 3px 8px;
+  border-radius: 12px;
+  font-size: 0.8rem;
+  margin-top: 5px;
+}
+
+.value-badge {
+  display: inline-block;
+  background: rgba(127, 90, 240, 0.2);
+  color: var(--text);
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-size: 0.8rem;
+  min-width: 30px;
+  text-align: center;
+}
+
+/* Status panels */
+.status-panel {
+  background: var(--bg-color);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 12px 15px;
+  margin-top: 10px;
+  font-size: 0.9rem;
+}
+
+.results-panel {
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 15px;
+  margin-top: 15px;
+  font-size: 0.9rem;
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+/* Better canvas indicators */
+#canvas.drawing {
+  cursor: crosshair;
+  box-shadow: 0 0 0 2px #e64c65;
+}
+
+#houghCanvas.drawing {
+  cursor: crosshair;
+  box-shadow: 0 0 0 2px #e64c65;
+}
+
+.mode-indicator {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  background: rgba(42, 42, 62, 0.9);
+  color: white;
+  padding: 8px 12px;
+  border-radius: var(--radius);
+  font-size: 0.8rem;
+  pointer-events: none;
+  z-index: 100;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.mode-indicator.visible {
+  opacity: 1;
+}
+
+/* Responsive improvements */
+@media (max-width: 768px) {
+  .control-panel {
+    flex-direction: column;
+  }
+  
+  .btn-group {
+    flex-direction: column;
+  }
+}
+
+/* Modal overlay styles */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.8);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s ease;
+}
+
+.modal-overlay.active {
+  opacity: 1;
+  pointer-events: all;
+}
+
+.modal-content {
+  background: var(--card-bg);
+  border-radius: var(--radius);
+  padding: 30px;
+  max-width: 800px;
+  max-height: 80vh;
+  overflow-y: auto;
+  width: 90%;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+  position: relative;
+}
+
+.modal-close {
+  position: absolute;
+  top: 15px;
+  right: 15px;
+  background: none;
+  border: none;
+  color: var(--subtext);
+  font-size: 1.5rem;
+  cursor: pointer;
+  transition: color 0.2s;
+}
+
+.modal-close:hover {
+  color: var(--text);
+}
+
+.modal-title {
+  color: var(--accent);
+  margin-bottom: 20px;
+  font-size: 1.5rem;
+}
+
+.method-explanation {
+  margin-bottom: 20px;
+}
+
+.method-explanation h3 {
+  color: var(--accent);
+  margin-top: 20px;
+  margin-bottom: 10px;
+}
+
+.method-explanation p {
+  margin-bottom: 10px;
+  line-height: 1.6;
+}
+
+.method-explanation ul {
+  margin-left: 20px;
+  margin-bottom: 15px;
+}
+
+.method-explanation li {
+  margin-bottom: 8px;
+}
+
+.method-explanation code {
+  background: rgba(0, 0, 0, 0.3);
+  padding: 2px 5px;
+  border-radius: 3px;
+  font-family: monospace;
+}
+
+.about-btn {
+  margin-top: 20px;
+  background: var(--accent);
+  color: white;
+  border: none;
+  padding: 10px 15px;
+  border-radius: var(--radius);
+  cursor: pointer;
+  transition: background 0.2s;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.about-btn:hover {
+  background: var(--accent-hover);
+}
+
     </style>
 
 </head>
@@ -206,40 +455,169 @@
     <canvas id="houghCanvas" width="512" height="512"></canvas>
   </div>
 
-  <div id="controls">
-    <button id="randomBtn">Random Image</button>
-    <br/><br/>
-    <input type="range" id="stepSlider" min="0" max="5" value="0" />
-    <div id="stepLabel">Step: original</div>
-  </div>
+  <div class="app-controls">
+    <div class="control-panel">
+      <div class="panel-section">
+        <h3>Image Controls</h3>
+        <button id="randomBtn" class="primary-btn">
+          <span class="icon">🖼️</span> Random Image
+        </button>
+        
+        <div class="slider-container">
+          <label for="stepSlider">Processing Step:</label>
+          <input type="range" id="stepSlider" min="0" max="5" value="0" />
+          <div id="stepLabel" class="badge">Step: original</div>
+        </div>
+      </div>
 
-  <div id="houghControls">
-    <h3>Interactive Hough Space</h3>
-    <div id="drawingTools">
-      <div class="tool-group">
-        <button id="toggleDraw">Enable Drawing</button>
-        <button id="clearHough">Clear Drawing</button>
-        <button id="toggleDrawMode">Draw on Hough</button>
+      <div class="panel-section">
+        <h3>Drawing Tools</h3>
+        <div class="btn-group">
+          <button id="toggleDraw" class="action-btn" title="Turn drawing on/off">
+            <span class="icon">✏️</span> Enable Drawing
+          </button>
+          <button id="toggleDrawMode" class="action-btn" title="Switch between drawing on Hough or Image">
+            <span class="icon">🔄</span> Draw on Hough
+          </button>
+          <button id="clearHough" class="danger-btn" title="Clear your drawing">
+            <span class="icon">🗑️</span> Clear Drawing
+          </button>
+        </div>
+
+        <div class="tool-settings">
+          <div class="slider-group">
+            <label for="brushSize">Brush Size:</label>
+            <input type="range" id="brushSize" min="1" max="20" value="5" />
+            <span id="brushSizeLabel" class="value-badge">5</span>
+          </div>
+          
+          <div class="slider-group">
+            <label for="brushIntensity">Intensity:</label>
+            <input type="range" id="brushIntensity" min="10" max="255" value="128" />
+            <span id="brushIntensityLabel" class="value-badge">128</span>
+          </div>
+        </div>
       </div>
-      <div class="tool-group">
-        <label>Brush Size:</label>
-        <input type="range" id="brushSize" min="1" max="20" value="5" />
-        <span id="brushSizeLabel">5</span>
-      </div>
-      <div class="tool-group">
-        <label>Intensity:</label>
-        <input type="range" id="brushIntensity" min="10" max="255" value="128" />
-        <span id="brushIntensityLabel">128</span>
+
+      <div class="panel-section">
+        <h3>Analysis</h3>
+        <div class="btn-group">
+          <button id="findSimilar" class="primary-btn" title="Search for similar images">
+            <span class="icon">🔍</span> Find Similar Images
+          </button>
+          <button id="showPreview" class="secondary-btn" title="Preview detected edges">
+            <span class="icon">👁️</span> Show Edge Preview
+          </button>
+          <button id="showDetectedLines" class="action-btn" title="Show detected lines from Hough peaks">
+            <span class="icon">📏</span> Show Detected Lines
+          </button>
+        </div>
       </div>
     </div>
-    <button id="findSimilar">Find Most Similar Image</button>
-    <button id="showPreview">Show Edge Preview</button>
-    <div id="loadingStatus">Loading JSON files...</div>
-    <div id="matchInfo">Draw on the Hough space and click "Find Most Similar Image" to search</div>
+
+    <div id="active-mode" class="mode-indicator">Drawing: <span id="draw-mode">Hough Space</span></div>
+    <div id="loadingStatus" class="status-panel">Loading JSON files...</div>
+    <div id="matchInfo" class="results-panel">Draw on the Hough space and click 'Find Similar Images' to search</div>
+    
+    <!-- About Methods Button -->
+    <button id="aboutMethodsBtn" class="about-btn">
+      <span class="icon">ℹ️</span> About the Methods
+    </button>
+  </div>
+
+  <!-- Modal Overlay -->
+  <div id="methodsModal" class="modal-overlay">
+    <div class="modal-content">
+      <button class="modal-close">&times;</button>
+      <h2 class="modal-title">Edge Detection and Hough Transform Methods</h2>
+      
+      <div class="method-explanation">
+        <h3>Canny Edge Detection</h3>
+        <p>The Canny edge detector is a multi-stage algorithm that identifies edges in images:</p>
+        <ol>
+          <li><strong>Grayscale Conversion:</strong> Convert the image to grayscale for simpler processing.</li>
+          <li><strong>Gradient Calculation:</strong> Compute intensity gradients using Sobel filters to find edge strength and direction.</li>
+          <li><strong>Non-Maximum Suppression:</strong> Thin edges by keeping only local maxima in the gradient direction.</li>
+          <li><strong>Edge Tracking:</strong> Classify edge pixels as strong, weak, or non-edges using high/low thresholds. Final edges are determined by hysteresis, connecting weak edges to strong ones.</li>
+        </ol>
+      </div>
+      
+      <div class="method-explanation">
+        <h3>Hough Transform</h3>
+        <p>The Hough Transform is used to detect lines in an image:</p>
+        <ul>
+          <li>Each edge point in image space is transformed into a sinusoidal curve in Hough space (ρ,θ).</li>
+          <li>Points where curves intersect in Hough space correspond to lines in the original image.</li>
+          <li>The accumulator array counts votes for potential lines.</li>
+          <li>Peaks in the accumulator indicate the most prominent lines.</li>
+        </ul>
+        <p>In this application, you can draw directly in Hough space to explore how different patterns correspond to lines in the image.</p>
+      </div>
+      
+      <div class="method-explanation">
+        <h3>Drawing on Image & Conversion to Hough Space</h3>
+        <p>This application provides two ways to interact with the Hough transform:</p>
+        
+        <h4>1. Drawing Directly on the Image</h4>
+        <ul>
+          <li>When you draw on the image canvas, your strokes are treated as potential edges.</li>
+          <li>The application performs a real-time Hough transform on your drawing:</li>
+          <ol>
+            <li>Each drawn pixel is considered as an edge point in image space.</li>
+            <li>For each point, we calculate all possible lines that could pass through it.</li>
+            <li>These lines are mapped to sinusoidal curves in Hough space (ρ,θ coordinates).</li>
+            <li>The intensity of your drawing affects how strongly these curves are represented.</li>
+          </ol>
+          <li>This converted Hough space representation is then used for similarity searches.</li>
+        </ul>
+        
+        <h4>2. Drawing in Hough Space</h4>
+        <ul>
+          <li>You can also draw directly in Hough space to explore how different patterns affect the image.</li>
+          <li>Each point in Hough space corresponds to a specific line in the original image.</li>
+          <li>Drawing bright spots in Hough space emphasizes certain line orientations.</li>
+        </ul>
+      </div>
+      
+      <div class="method-explanation">
+        <h3>Edge Preview Functionality</h3>
+        <p>The "Show Edge Preview" feature visualizes how your Hough space drawing would appear as actual edges in the image:</p>
+        <ul>
+          <li><strong>Inverse Hough Transform:</strong> The preview performs an inverse transform from Hough space back to image space.</li>
+          <li><strong>Line Projection:</strong> For each significant point in Hough space, the corresponding line is drawn in the image.</li>
+          <li><strong>Intensity Mapping:</strong> The brightness of points in Hough space determines the opacity of the projected lines.</li>
+          <li><strong>Real-time Feedback:</strong> As you modify your Hough space drawing, the edge preview updates immediately.</li>
+        </ul>
+        <p>This feature helps you understand the relationship between Hough space patterns and the actual image edges they represent.</p>
+      </div>
+      
+      <div class="method-explanation">
+        <h3>Image Similarity Search</h3>
+        <p>The application uses Hough space representations to find similar images:</p>
+        <ul>
+          <li>Each image's edge information is converted to a Hough space representation.</li>
+          <li>When you draw in Hough space, the system compares your drawing to precomputed Hough transforms.</li>
+          <li>Similarity is measured using distance metrics between Hough space patterns.</li>
+          <li>The most similar images (based on edge structure) are returned as results.</li>
+        </ul>
+      </div>
+      
+      <div class="method-explanation">
+        <h3>Interactive Features</h3>
+        <p>Key interactive elements in this application:</p>
+        <ul>
+          <li><strong>Drawing Modes:</strong> Draw directly in Hough space or on the image (which gets converted to Hough space).</li>
+          <li><strong>Edge Preview:</strong> Visualize how your Hough space drawing would appear as edges in the image.</li>
+          <li><strong>Processing Steps:</strong> View each stage of the Canny edge detection pipeline.</li>
+          <li><strong>Similarity Search:</strong> Find images with edge structures similar to your drawing.</li>
+        </ul>
+      </div>
+    </div>
   </div>
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pako/2.1.0/pako.min.js"></script>
   <script>
+    document.addEventListener('DOMContentLoaded', function() {
     const PROCESSING_STEPS = [
       'original','grayscale','gradient_magnitude','nonmaxima','hysteresis','canny_downscaled'
     ];
@@ -268,6 +646,10 @@
     const matchInfo         = document.getElementById('matchInfo');
     const loadingStatus     = document.getElementById('loadingStatus');
     const toggleDrawModeBtn = document.getElementById('toggleDrawMode');
+    const aboutMethodsBtn   = document.getElementById('aboutMethodsBtn');
+    const methodsModal      = document.getElementById('methodsModal');
+    const modalCloseBtn     = document.querySelector('.modal-close');
+    const showDetectedLinesBtn = document.getElementById('showDetectedLines');
     
 
     // Data holders
@@ -279,6 +661,7 @@
     let isDrawing = false, drawingEnabled = false, showPreview = false;
     let drawingMode = 'hough'; // 'hough' or 'image'
     let imageDrawData = null;
+    let showDetectedLines = false;
 
     // --- Helper functions (decode, processing, drawing) ---
     function decodeBase64Gzip(encoded) {
@@ -446,6 +829,9 @@
         houghCtx.imageSmoothingEnabled=false;
         houghCtx.drawImage(off2,0,0,width,height);
         houghCtx.globalCompositeOperation='source-over';
+      }
+      if (showDetectedLines) {
+        setTimeout(() => drawDetectedLines(), 10);
       }
     }
 
@@ -634,6 +1020,148 @@
       
       previewCtx.putImageData(edgeImgData, 0, 0);
     }
+
+    // Function to find peaks in Hough space
+  function findHoughPeaks(houghData, threshold = 100, minDistance = 10) {
+    const peaks = [];
+    const width = houghData.width;
+    const height = houghData.height;
+    const data = houghData.data;
+    
+    for (let y = minDistance; y < height - minDistance; y++) {
+      for (let x = minDistance; x < width - minDistance; x++) {
+        const idx = (y * width + x) * 4;
+        const intensity = data[idx]; // Red channel
+        
+        if (intensity > threshold) {
+          // Check if this is a local maximum
+          let isLocalMax = true;
+          for (let dy = -minDistance; dy <= minDistance && isLocalMax; dy++) {
+            for (let dx = -minDistance; dx <= minDistance && isLocalMax; dx++) {
+              if (dx === 0 && dy === 0) continue;
+              const neighborIdx = ((y + dy) * width + (x + dx)) * 4;
+              if (data[neighborIdx] >= intensity) {
+                isLocalMax = false;
+              }
+            }
+          }
+          
+          if (isLocalMax) {
+            peaks.push({ x, y, intensity });
+          }
+        }
+      }
+    }
+    
+    // Sort by intensity (strongest peaks first)
+    peaks.sort((a, b) => b.intensity - a.intensity);
+    return peaks.slice(0, 20); // Return top 20 peaks
+  }
+
+  // Function to draw detected lines on the preview overlay
+  function drawDetectedLines() {
+    if (!originalHoughData) return;
+    
+    previewCtx.clearRect(0, 0, width, height);
+    
+    // Find peaks in the original Hough space
+    const peaks = findHoughPeaks(originalHoughData, 50, 5);
+    
+    if (peaks.length === 0) {
+      console.log("No peaks found in Hough space");
+      return;
+    }
+    
+    console.log(`Found ${peaks.length} peaks`);
+    
+    // Parameters for Hough transform
+    const houghWidth = originalHoughData.width;
+    const houghHeight = originalHoughData.height;
+    const maxDist = Math.sqrt(width * width + height * height) / 2;
+    const dTheta = Math.PI / houghWidth;
+    
+    // Set up drawing style
+    previewCtx.strokeStyle = 'rgba(255, 0, 0, 0.8)';
+    previewCtx.lineWidth = 2;
+    
+    // Draw each detected line
+    peaks.forEach((peak, index) => {
+      const theta = peak.x * dTheta;
+      const rho = (peak.y / houghHeight) * 2 * maxDist - maxDist;
+      
+      const cosTheta = Math.cos(theta);
+      const sinTheta = Math.sin(theta);
+      
+      // Calculate line endpoints
+      let x1, y1, x2, y2;
+      
+      if (Math.abs(sinTheta) > Math.abs(cosTheta)) {
+        // More vertical line
+        y1 = 0;
+        y2 = height - 1;
+        x1 = (rho - y1 * sinTheta) / cosTheta;
+        x2 = (rho - y2 * sinTheta) / cosTheta;
+      } else {
+        // More horizontal line
+        x1 = 0;
+        x2 = width - 1;
+        y1 = (rho - x1 * cosTheta) / sinTheta;
+        y2 = (rho - x2 * cosTheta) / sinTheta;
+      }
+      
+      // Only draw if line intersects the image
+      if ((x1 >= 0 && x1 < width) || (x2 >= 0 && x2 < width) || 
+          (y1 >= 0 && y1 < height) || (y2 >= 0 && y2 < height)) {
+        
+        // Clip line to image boundaries
+        const clipped = clipLineToRect(x1, y1, x2, y2, 0, 0, width, height);
+        if (clipped) {
+          previewCtx.beginPath();
+          previewCtx.moveTo(clipped.x1, clipped.y1);
+          previewCtx.lineTo(clipped.x2, clipped.y2);
+          previewCtx.stroke();
+        }
+      }
+    });
+  }
+
+  // Helper function to clip line to rectangle
+  function clipLineToRect(x1, y1, x2, y2, rectX, rectY, rectWidth, rectHeight) {
+    const dx = x2 - x1;
+    const dy = y2 - y1;
+    
+    let t1 = 0, t2 = 1;
+    
+    const clipTest = (p, q) => {
+      if (p === 0) return q >= 0;
+      const t = q / p;
+      if (p < 0) {
+        if (t > t2) return false;
+        if (t > t1) t1 = t;
+      } else {
+        if (t < t1) return false;
+        if (t < t2) t2 = t;
+      }
+      return true;
+    };
+    
+    if (clipTest(-dx, x1 - rectX) &&
+        clipTest(dx, (rectX + rectWidth) - x1) &&
+        clipTest(-dy, y1 - rectY) &&
+        clipTest(dy, (rectY + rectHeight) - y1)) {
+      
+      return {
+        x1: x1 + t1 * dx,
+        y1: y1 + t1 * dy,
+        x2: x1 + t2 * dx,
+        y2: y1 + t2 * dy
+      };
+    }
+    
+    return null;
+  }
+
+    
 
     // --- Search against server ---
     async function findMostSimilarImage(){
@@ -867,16 +1395,31 @@
       }
     }
 
+    function updateDrawingModeIndicator() {
+      const modeIndicator = document.getElementById('active-mode');
+      const modeText = document.getElementById('draw-mode');
+      
+      if (drawingEnabled) {
+        modeIndicator.classList.add('visible');
+        modeText.textContent = drawingMode === 'hough' ? 'Hough Space' : 'Image';
+      } else {
+        modeIndicator.classList.remove('visible');
+      }
+    }
+
     // --- Event listeners ---
     stepSlider.addEventListener('input',e=>{
       const v=parseInt(e.target.value);
       stepLabel.textContent=`Step: ${PROCESSING_STEPS[v]}`;
       drawStep(v);
     });
-    randomBtn.addEventListener('click',loadRandomImage);
+    randomBtn.addEventListener('click', (e) => {
+      console.log('Random button clicked');
+      loadRandomImage();
+    });
     toggleDrawBtn.addEventListener('click', () => {
       drawingEnabled = !drawingEnabled;
-      toggleDrawBtn.textContent = drawingEnabled ? 'Disable Drawing' : 'Enable Drawing';
+      toggleDrawBtn.textContent = drawingEnabled ? '✏️ Disable Drawing' : '✏️ Enable Drawing';
       toggleDrawBtn.classList.toggle('active', drawingEnabled);
       houghCanvas.classList.toggle('drawing', drawingEnabled && drawingMode === 'hough');
       canvas.classList.toggle('drawing', drawingEnabled && drawingMode === 'image');
@@ -889,6 +1432,7 @@
         }
       }
       redrawHoughCanvas();
+      updateDrawingModeIndicator();
     });
     clearHoughBtn.addEventListener('click', () => {
       if(drawingMode === 'hough') {
@@ -915,13 +1459,16 @@
     });
     toggleDrawModeBtn.addEventListener('click', () => {
       drawingMode = drawingMode === 'hough' ? 'image' : 'hough';
-      toggleDrawModeBtn.textContent = drawingMode === 'hough' ? 'Draw on Image' : 'Draw on Hough';
+      toggleDrawModeBtn.textContent = drawingMode === 'hough' ? '🔄 Draw on Image' : '🔄 Draw on Hough';
       toggleDrawModeBtn.classList.toggle('active', drawingMode === 'image');
       
-      // Initialize appropriate drawing surface
+      houghCanvas.classList.toggle('drawing', drawingEnabled && drawingMode === 'hough');
+      canvas.classList.toggle('drawing', drawingEnabled && drawingMode === 'image');
+      
       if(drawingMode === 'image') {
         initializeImageDrawing();
       }
+      updateDrawingModeIndicator();
     });
     houghCanvas.addEventListener('mousedown',e=>{
       if(!drawingEnabled) return;
@@ -954,6 +1501,37 @@
       canvas.addEventListener(evt, () => isDrawing = false);
     });
 
+    // Modal functionality
+    aboutMethodsBtn.addEventListener('click', () => {
+      methodsModal.classList.add('active');
+    });
+
+    modalCloseBtn.addEventListener('click', () => {
+      methodsModal.classList.remove('active');
+    });
+
+    methodsModal.addEventListener('click', (e) => {
+      if (e.target === methodsModal) {
+        methodsModal.classList.remove('active');
+      }
+    });
+
+    showDetectedLinesBtn.addEventListener('click', () => {
+    showDetectedLines = !showDetectedLines;
+    showDetectedLinesBtn.textContent = showDetectedLines ? '📏 Hide Detected Lines' : '📏 Show Detected Lines';
+    showDetectedLinesBtn.classList.toggle('active', showDetectedLines);
+    
+    if (showDetectedLines) {
+      drawDetectedLines();
+    } else {
+      previewCtx.clearRect(0, 0, width, height);
+      // If edge preview is also active, redraw it
+      if (showPreview) {
+        updateEdgePreview();
+      }
+    }
+  });
+
     // --- Poll server readiness ---
     findSimilarBtn.disabled = true;
     async function checkServerReady(){
@@ -977,7 +1555,7 @@
 
     // --- Initialize data loading ---
     loadAllJsonFiles();
-
+  });
   </script>
 </body>
 </html>
