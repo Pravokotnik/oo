@@ -1,0 +1,5 @@
+na clustering ko delamo poročilo treba označit par točk kakšne priblizne tocke so glavne za poze, kakšne poze so kje, kako razlozit to globalno strukturo
+
+video kot umirjena promocija za inteligentne uporabnike
+
+Prosojnice ki bolj tehnično opišejo algoritme ki smo jih uporabili ipd.

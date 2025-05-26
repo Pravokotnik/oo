@@ -69,6 +69,8 @@ async function init() {
     loadingScreen.style.display = 'none';
     appContainer.style.display = 'block';
     loadRandomImage();
+
+    resizeCanvas();
 }
 
 // Data loading functions

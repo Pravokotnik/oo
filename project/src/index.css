@@ -1,0 +1,113 @@
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600;700&family=Montserrat:wght@300;400;500;600&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --font-serif: 'Playfair Display', serif;
+  --font-sans: 'Montserrat', sans-serif;
+}
+
+#animation-screen {
+  width: 100vw;
+  height: 100vh;
+  background-color: red;
+  position: fixed;
+  top: 0;
+  left: -100vw;
+  z-index: 500;
+}
+
+#animation-screen.active {
+  left: 0;
+  transition: left 0.5s ease-in-out;
+}
+
+html {
+  height: 100%;
+  overflow: auto;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  font-family: var(--font-sans);
+  height: 200vh; /* Allow scrolling without page movement */
+  background: #171717;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-serif);
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #1a1a1a;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #d97706;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #b45309;
+}
+
+/* X-ray vision effect */
+.xray-vision {
+  background: #000 !important;
+}
+
+.xray-vision::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background: linear-gradient(
+    45deg,
+    rgba(0, 255, 0, 0.1),
+    rgba(0, 255, 0, 0.2)
+  );
+  pointer-events: none;
+  z-index: 40;
+}
+
+.xray-vision * {
+  transition: all 0.5s ease-out;
+}
+
+.xray-vision img,
+.xray-vision div {
+  opacity: 0.9;
+}
+
+.xray-vision section {
+  background: #000 !important;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fadeOut {
+  from {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+}

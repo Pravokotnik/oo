@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Histogram Image Explorer</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div id="loading-screen">
+        <div class="progress-container">
+            <div id="progress-bar" class="progress-bar"></div>
+        </div>
+        <div id="loading-status">Loading image data...</div>
+    </div>
+
+    <div id="app-container" style="display: none;">
+        <div class="split-view">
+            <div class="image-panel">
+                <img id="display-image" alt="Selected image">
+                <div id="image-info"></div>
+            </div>
+            <div class="histogram-panel">
+                <canvas id="histogram-canvas"></canvas>
+                <div class="controls">
+                    <div id="distance-display">Distance: -</div>
+                    <div class="control-row">
+                        <select id="metric-select">
+                            <option value="hellinger">Hellinger Distance</option>
+                            <option value="l2">L2 (Euclidean) Distance</option>
+                        </select>
+                    </div>
+                    <div class="control-row">
+                        <button id="random-btn">New Random Image</button>
+                        <button id="reset-btn">Reset Histogram</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script src="app.js"></script>
+</body>
+</html>

@@ -108,6 +108,9 @@ function findClosestImage(targetH, targetS, targetL) {
 function createTile(imagePath) {
   const div = document.createElement('div');
   div.className = 'tile';
+  div.onclick = () => {
+    window.location.href = "./histogram.html";
+  }
 
   if (imagePath) {
     const img = document.createElement('img');

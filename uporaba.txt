@@ -1,3 +1,26 @@
+
+
+NEW:
+
+Wait for full execution:
+python precompute_annoy
+
+One terminal:
+python hough_server.py
+
+Second terminal:
+python main.py
+
+visit:
+http://127.0.0.1:5000
+
+----------------------------------
+NOTES:
+Dva se ti poženeta v ozadju, to sta poses in faces.
+
+
+-------------------
+OLD:
 pozeni precompute_annoy.py
 
 

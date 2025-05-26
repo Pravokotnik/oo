@@ -7,6 +7,8 @@ import numpy as np
 from annoy import AnnoyIndex
 import pickle
 
+print("Precomputing Annoy index for Hough data...")
+
 def decode_base64_gzip(encoded):
     b64data    = encoded['data']
     compressed = base64.b64decode(b64data)
