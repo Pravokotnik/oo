@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Object Viewer</title>
+    <title>Object Ratio Viewer</title>
     <style>
         :root {
             --bg-color: #1e1e2e;
@@ -330,76 +330,115 @@
                 flex-direction: column;
             }
         }
-        /* Give all buttons some horizontal and vertical breathing room */
-        #controls button {
-          margin: 0.5rem;
-        }
-
-        /* If you want more fine-grained control, e.g. between class-selection controls */
-        #class-selection > * {
-          margin-right: 0.5rem;
-        }
-
-        /* And between navigation buttons */
-        #navigation > button {
-          margin: 0 0.5rem;
-        }
     </style>
 </head>
 <body>
     <div id="container">
-        <h1>Object Viewer</h1>
+        <h1>Object Ratio Viewer</h1>
         
         <div id="image-container">
             <img id="image-display" style="display: none;">
             <div id="detections-container"></div>
         </div>
         
-        <div id="controls">
-          <div class="control-panel">
-            <!-- Class selector panel -->
+        <div class="control-panel">
             <div class="panel-section">
-              <h3>Class Selection</h3>
-              <div id="class-selection">
+                <h3>Class Selection</h3>
                 <select id="class-select">
-                  <option value="">Select a class</option>
+                    <option value="">Select a class</option>
                 </select>
-                <button id="load-class">Load Class</button>
-              </div>
+                <button id="load-class" class="primary-btn">Load Class</button>
             </div>
-
-            <!-- Navigation panel -->
+            
             <div class="panel-section">
-              <h3>Navigation</h3>
-              <div id="navigation" class="btn-group">
-                <button id="prev-bucket">↑ Prev Bucket (W)</button>
-                <button id="next-bucket">↓ Next Bucket (S)</button>
-                <button id="prev-image">← Prev Image (A)</button>
-                <button id="next-image">→ Next Image (D)</button>
-              </div>
+                <h3>Navigation</h3>
+                <div class="btn-group">
+                    <button id="prev-bucket" class="action-btn">↑ Prev Bucket (W)</button>
+                    <button id="next-bucket" class="action-btn">↓ Next Bucket (S)</button>
+                </div>
+                <div class="btn-group">
+                    <button id="prev-image" class="action-btn">← Prev Image (A)</button>
+                    <button id="next-image" class="action-btn">→ Next Image (D)</button>
+                </div>
             </div>
-
-            <!-- Instructions panel -->
+            
             <div class="panel-section">
-              <h3>Instructions</h3>
-              <p>Select a class to begin viewing images. Use the navigation buttons or keyboard shortcuts:</p>
-              <ul>
-                <li><strong>W/↑</strong>: Previous bucket (smaller ratios)</li>
-                <li><strong>S/↓</strong>: Next bucket (larger ratios)</li>
-                <li><strong>A/←</strong>: Previous image</li>
-                <li><strong>D/→</strong>: Next image</li>
-              </ul>
+                <h3>Display Settings</h3>
+                <div class="slider-group">
+                    <label for="box-opacity">Box Opacity:</label>
+                    <input type="range" id="box-opacity" min="0.1" max="1" step="0.1" value="0.7">
+                    <span id="opacity-value" class="value-badge">0.7</span>
+                </div>
+                <div class="slider-group">
+                    <label for="box-thickness">Box Thickness:</label>
+                    <input type="range" id="box-thickness" min="1" max="5" step="1" value="2">
+                    <span id="thickness-value" class="value-badge">2</span>
+                </div>
             </div>
-          </div>
         </div>
+        
+        <div class="info-panel">
+            <p><strong>Current Class:</strong> <span id="current-class">None selected</span></p>
+            <p><strong>Bucket Range:</strong> <span id="bucket-range">-</span></p>
+            <p><strong>Image:</strong> <span id="image-position">-</span></p>
+            <p><strong>Path:</strong> <span id="image-path">-</span></p>
+        </div>
+        
+        <button id="aboutMethodsBtn" class="about-btn">
+            <span class="icon">ℹ️</span> About This Visualization
+        </button>
+    </div>
 
+    <!-- Modal Overlay -->
+    <div id="methodsModal" class="modal-overlay">
+        <div class="modal-content">
+            <button class="modal-close">&times;</button>
+            <h2 class="modal-title">Object Ratio Visualization</h2>
+            
+            <div class="method-explanation">
+                <h3>About This Tool</h3>
+                <p>This visualization tool displays images from the WikiArt dataset with detected objects, organized by the relative size (ratio) of each object class within the images.</p>
+                
+                <h3>Data Collection Process</h3>
+                <p>The data was generated through the following steps:</p>
+                <ol>
+                    <li><strong>Object Detection:</strong> We used a pre-trained object detection model (YOLOv5) to analyze all images in the WikiArt dataset.</li>
+                    <li><strong>Ratio Calculation:</strong> For each detected object, we calculated its relative size as a percentage of the total image area.</li>
+                    <li><strong>Bucketing:</strong> Objects were grouped into 100 buckets based on their size ratios (from 0% to 100% of image area).</li>
+                    <li><strong>Organization:</strong> Images were then organized by object class and ratio bucket for visualization.</li>
+                </ol>
+                
+                <h3>How to Use This Tool</h3>
+                <ul>
+                    <li><strong>Select a Class:</strong> Choose an object class from the dropdown to view images containing that object.</li>
+                    <li><strong>Navigate Buckets:</strong> Use the up/down buttons (or W/S keys) to move between different size ratio buckets.</li>
+                    <li><strong>Browse Images:</strong> Use the left/right buttons (or A/D keys) to view different images within the current bucket.</li>
+                    <li><strong>Adjust Display:</strong> Modify the bounding box opacity and thickness using the sliders.</li>
+                </ul>
+                
+                <h3>Understanding the Visualization</h3>
+                <p>Each image shows the original artwork with detected objects highlighted:</p>
+                <ul>
+                    <li><strong>Bounding Boxes:</strong> Colored rectangles around detected objects.</li>
+                    <li><strong>Labels:</strong> Class name and detection confidence score (0-1).</li>
+                    <li><strong>Bucket Range:</strong> Shows the percentage range of object sizes in the current bucket (e.g., 10-11% means objects take up 10-11% of the image area).</li>
+                </ul>
+                
+                <h3>Technical Details</h3>
+                <p>The visualization is built with:</p>
+                <ul>
+                    <li>Vanilla JavaScript for the interactive components</li>
+                    <li>HTML5 Canvas for image rendering and bounding box display</li>
+                    <li>Precomputed JSON data files containing detection results</li>
+                    <li>Responsive design that works on desktop and mobile devices</li>
+                </ul>
+            </div>
+        </div>
     </div>
 
     <script>
         // Constants
         const NUM_BUCKETS = 100;
-        const WINDOW_WIDTH = 1920;
-        const WINDOW_HEIGHT = 1080;
         
         // Viewer state
         let allRatios = {};
@@ -412,6 +451,8 @@
         let scaleFactor = 1.0;
         let shiftX = 0;
         let shiftY = 0;
+        let boxOpacity = 0.7;
+        let boxThickness = 2;
         
         // DOM elements
         const imageDisplay = document.getElementById('image-display');
@@ -422,7 +463,17 @@
         const nextBucketBtn = document.getElementById('next-bucket');
         const prevImageBtn = document.getElementById('prev-image');
         const nextImageBtn = document.getElementById('next-image');
-        const infoDiv = document.getElementById('info');
+        const currentClassSpan = document.getElementById('current-class');
+        const bucketRangeSpan = document.getElementById('bucket-range');
+        const imagePositionSpan = document.getElementById('image-position');
+        const imagePathSpan = document.getElementById('image-path');
+        const boxOpacitySlider = document.getElementById('box-opacity');
+        const opacityValueSpan = document.getElementById('opacity-value');
+        const boxThicknessSlider = document.getElementById('box-thickness');
+        const thicknessValueSpan = document.getElementById('thickness-value');
+        const aboutMethodsBtn = document.getElementById('aboutMethodsBtn');
+        const methodsModal = document.getElementById('methodsModal');
+        const modalCloseBtn = document.querySelector('.modal-close');
         
         // Initialize the viewer
         async function initViewer() {
@@ -446,7 +497,7 @@
                 console.log('Viewer initialized');
             } catch (error) {
                 console.error('Error initializing viewer:', error);
-                infoDiv.innerHTML = `<p style="color: red;">Error loading data: ${error.message}</p>`;
+                showError(`Error loading data: ${error.message}`);
             }
         }
         
@@ -462,8 +513,8 @@
                 
                 if (allClassRatios.length === 0) continue;
                 
-                const minRatio = 0; // Math.min(...allClassRatios);
-                const maxRatio = 100; // Math.max(...allClassRatios);
+                const minRatio = 0;
+                const maxRatio = 100;
                 const bucketSize = (maxRatio - minRatio) / NUM_BUCKETS;
                 
                 // Initialize buckets
@@ -493,7 +544,6 @@
             
             const classes = Object.keys(bucketedRatios).sort();
             for (const className of classes) {
-                // Calculate total detections for this class
                 let total = 0;
                 for (const bucket in bucketedRatios[className]) {
                     total += bucketedRatios[className][bucket].images.length;
@@ -538,6 +588,34 @@
                         break;
                 }
             });
+            
+            // Display settings
+            boxOpacitySlider.addEventListener('input', (e) => {
+                boxOpacity = parseFloat(e.target.value);
+                opacityValueSpan.textContent = boxOpacity;
+                if (currentClass) showCurrentImage();
+            });
+            
+            boxThicknessSlider.addEventListener('input', (e) => {
+                boxThickness = parseInt(e.target.value);
+                thicknessValueSpan.textContent = boxThickness;
+                if (currentClass) showCurrentImage();
+            });
+            
+            // Modal
+            aboutMethodsBtn.addEventListener('click', () => {
+                methodsModal.classList.add('active');
+            });
+            
+            modalCloseBtn.addEventListener('click', () => {
+                methodsModal.classList.remove('active');
+            });
+            
+            methodsModal.addEventListener('click', (e) => {
+                if (e.target === methodsModal) {
+                    methodsModal.classList.remove('active');
+                }
+            });
         }
         
         // Load the selected class
@@ -551,8 +629,10 @@
             shuffleArray(currentImages);
             currentImageIdx = 0;
             
+            currentClassSpan.textContent = currentClass;
+            
             if (currentImages.length === 0) {
-                infoDiv.innerHTML = `<p>No images found in middle bucket for ${currentClass}</p>`;
+                showError(`No images found in middle bucket for ${currentClass}`);
                 return;
             }
             
@@ -590,12 +670,9 @@
             
             // Update info display
             const bucketRange = bucketedRatios[currentClass][currentBucketIdx].range;
-            infoDiv.innerHTML = `
-                <p><strong>Class:</strong> ${currentClass}</p>
-                <p><strong>Bucket:</strong> ${currentBucketIdx+1}/${NUM_BUCKETS} (${bucketRange[0].toFixed(1)}%-${bucketRange[1].toFixed(1)}%)</p>
-                <p><strong>Image:</strong> ${currentImageIdx+1}/${currentImages.length}</p>
-                <p><strong>Path:</strong> ${imgPath}</p>
-            `;
+            bucketRangeSpan.textContent = `${bucketRange[0].toFixed(1)}% - ${bucketRange[1].toFixed(1)}%`;
+            imagePositionSpan.textContent = `${currentImageIdx + 1} / ${currentImages.length}`;
+            imagePathSpan.textContent = imgPath;
         }
         
         // Prepare and display an image with its detections
@@ -679,11 +756,14 @@
                         boxElement.style.width = `${boxWidth}px`;
                         boxElement.style.height = `${boxHeight}px`;
                         boxElement.style.borderColor = color;
+                        boxElement.style.opacity = boxOpacity;
+                        boxElement.style.borderWidth = `${boxThickness}px`;
                         
                         const labelElement = document.createElement('div');
                         labelElement.className = 'detection-label';
                         labelElement.textContent = `${className} ${conf.toFixed(2)}`;
                         labelElement.style.color = color;
+                        labelElement.style.opacity = boxOpacity;
                         
                         boxElement.appendChild(labelElement);
                         detectionsContainer.appendChild(boxElement);
@@ -693,7 +773,7 @@
             
             // Handle image load errors
             imageDisplay.onerror = function() {
-                infoDiv.innerHTML += `<p style="color: red;">Error loading image: ${imgPath}</p>`;
+                showError(`Error loading image: ${imgPath}`);
             };
         }
         
@@ -711,6 +791,26 @@
             const g = 100 + Math.floor(Math.random() * 156);
             const b = 100 + Math.floor(Math.random() * 156);
             return `rgb(${r}, ${g}, ${b})`;
+        }
+        
+        // Show error message
+        function showError(message) {
+            const errorDiv = document.createElement('div');
+            errorDiv.style.color = '#ff6b6b';
+            errorDiv.style.marginTop = '10px';
+            errorDiv.textContent = message;
+            
+            // Remove previous error if exists
+            const oldError = document.querySelector('.error-message');
+            if (oldError) oldError.remove();
+            
+            errorDiv.className = 'error-message';
+            document.querySelector('.info-panel').appendChild(errorDiv);
+            
+            // Auto-remove after 5 seconds
+            setTimeout(() => {
+                errorDiv.remove();
+            }, 5000);
         }
         
         // Initialize the viewer when the page loads

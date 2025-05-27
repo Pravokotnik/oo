@@ -5,3 +5,6 @@ yolo*.pt
 
 /pickles/hough.ann
 /wikiart.zip
+
+details_results.json
+ratio_results.json

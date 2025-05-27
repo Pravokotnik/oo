@@ -5,6 +5,9 @@ NEW:
 Wait for full execution:
 python precompute_annoy.py
 
+Run:
+python wwwwprecompute.py
+
 One terminal:
 python hough_server.py
 
