@@ -1,0 +1,3 @@
+https://github.com/Pravokotnik/oo
+
+Zaradi velikosti projekta in zahtevnosti uporabe smo oddali link do GitHub repozitorija, kjer se nahajajo vse datoteke.

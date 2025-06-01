@@ -379,20 +379,83 @@
               </div>
             </div>
 
-            <!-- Instructions panel -->
+            <!-- Help panel -->
             <div class="panel-section">
-              <h3>Instructions</h3>
-              <p>Select a class to begin viewing images. Use the navigation buttons or keyboard shortcuts:</p>
-              <ul>
-                <li><strong>W/↑</strong>: Previous bucket (smaller ratios)</li>
-                <li><strong>S/↓</strong>: Next bucket (larger ratios)</li>
-                <li><strong>A/←</strong>: Previous image</li>
-                <li><strong>D/→</strong>: Next image</li>
-              </ul>
+              <h3>Help</h3>
+              <div class="btn-group">
+                <button id="show-instructions">View Instructions</button>
+                <button id="show-explanation">How It Works</button>
+              </div>
             </div>
           </div>
         </div>
 
+        <!-- Info display -->
+        <div id="info" class="info-panel">
+          <p>Select a class to begin viewing images.</p>
+        </div>
+    </div>
+
+    <!-- Instructions Modal -->
+    <div id="instructions-modal" class="modal-overlay">
+      <div class="modal-content">
+        <button class="modal-close">&times;</button>
+        <h2 class="modal-title">Instructions</h2>
+        <div class="method-explanation">
+          <h3>Getting Started</h3>
+          <p>This tool allows you to explore object detections in images, organized by the relative size of detected objects.</p>
+          
+          <h3>Basic Usage</h3>
+          <ol>
+            <li><strong>Select a class</strong> from the dropdown menu</li>
+            <li><strong>Click "Load Class"</strong> to load images containing that object</li>
+            <li><strong>Navigate</strong> through the images using the buttons or keyboard shortcuts</li>
+          </ol>
+          
+          <h3>Navigation Controls</h3>
+          <ul>
+            <li><strong>Prev/Next Bucket</strong> (W/S or ↑/↓): Move between size groups (smaller to larger objects)</li>
+            <li><strong>Prev/Next Image</strong> (A/D or ←/→): Move between images in the current size group</li>
+          </ul>
+          
+          <h3>Viewing Images</h3>
+          <p>Each image is automatically centered on the selected object class. All detected objects are shown with bounding boxes and labels.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Explanation Modal -->
+    <div id="explanation-modal" class="modal-overlay">
+      <div class="modal-content">
+        <button class="modal-close">&times;</button>
+        <h2 class="modal-title">How It Works</h2>
+        <div class="method-explanation">
+          <h3>Data Processing</h3>
+          <p>The system processes object detection results by:</p>
+          <ol>
+            <li>Calculating the relative size (as a percentage of image area) for each detected object</li>
+            <li>Grouping these sizes into 100 buckets (from smallest to largest)</li>
+            <li>Organizing images based on which bucket their detected objects fall into</li>
+          </ol>
+          
+          <h3>Technical Implementation</h3>
+          <p>The frontend application:</p>
+          <ul>
+            <li>Loads pre-processed JSON data containing detection information</li>
+            <li>Dynamically scales and positions images to center the selected object</li>
+            <li>Draws bounding boxes for all detected objects in each image</li>
+            <li>Provides navigation through the organized dataset</li>
+          </ul>
+          
+          <h3>Key Features</h3>
+          <ul>
+            <li><strong>Bucket System:</strong> Images are grouped by object size percentiles</li>
+            <li><strong>Smart Centering:</strong> Automatically centers the view on the selected object</li>
+            <li><strong>Visualization:</strong> Shows all detections with colored bounding boxes and labels</li>
+            <li><strong>Responsive Design:</strong> Works on different screen sizes</li>
+          </ul>
+        </div>
+      </div>
     </div>
 
     <script>
@@ -423,6 +486,13 @@
         const prevImageBtn = document.getElementById('prev-image');
         const nextImageBtn = document.getElementById('next-image');
         const infoDiv = document.getElementById('info');
+        
+        // Modal elements
+        const instructionsModal = document.getElementById('instructions-modal');
+        const explanationModal = document.getElementById('explanation-modal');
+        const showInstructionsBtn = document.getElementById('show-instructions');
+        const showExplanationBtn = document.getElementById('show-explanation');
+        const modalCloseBtns = document.querySelectorAll('.modal-close');
         
         // Initialize the viewer
         async function initViewer() {
@@ -517,6 +587,27 @@
             prevImageBtn.addEventListener('click', () => navigateImage(-1));
             nextImageBtn.addEventListener('click', () => navigateImage(1));
             
+            // Modal buttons
+            showInstructionsBtn.addEventListener('click', () => instructionsModal.classList.add('active'));
+            showExplanationBtn.addEventListener('click', () => explanationModal.classList.add('active'));
+            
+            // Modal close buttons
+            modalCloseBtns.forEach(btn => {
+                btn.addEventListener('click', () => {
+                    instructionsModal.classList.remove('active');
+                    explanationModal.classList.remove('active');
+                });
+            });
+            
+            // Close modals when clicking outside content
+            [instructionsModal, explanationModal].forEach(modal => {
+                modal.addEventListener('click', (e) => {
+                    if (e.target === modal) {
+                        modal.classList.remove('active');
+                    }
+                });
+            });
+            
             // Keyboard shortcuts
             document.addEventListener('keydown', (e) => {
                 switch (e.key.toLowerCase()) {
@@ -535,6 +626,10 @@
                     case 'd':
                     case 'arrowright':
                         navigateImage(1);
+                        break;
+                    case 'escape':
+                        instructionsModal.classList.remove('active');
+                        explanationModal.classList.remove('active');
                         break;
                 }
             });

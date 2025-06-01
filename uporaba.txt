@@ -6,7 +6,7 @@ Wait for full execution:
 python precompute_annoy.py
 
 Run:
-python wwwwprecompute.py
+python wwwwpreprocess.py
 
 One terminal:
 python hough_server.py
