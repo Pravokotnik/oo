@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Art Emotion Explorer</title>
+    <link rel="stylesheet" href="faces.css">
+</head>
+<body>
+    <div class="loading-screen" id="loading-screen">
+        <div class="loading-spinner"></div>
+        <div class="loading-text">Loading Emotion Explorer</div>
+        <div id="loading-status">Initializing...</div>
+        <div class="progress-container">
+            <div class="progress-bar" id="progress-bar"></div>
+        </div>
+    </div>
+
+    <div class="container">
+        <header>
+            <h1>Art Emotion Explorer</h1>
+            <p class="subtitle">Explore artworks through the emotions expressed in their subjects' faces</p>
+        </header>
+
+        <div class="app-container">
+            <div class="main-content">
+                <div class="image-container">
+                    <div class="image-wrapper" id="image-wrapper">
+                        <img id="display-image" src="" alt="Selected artwork">
+                        <div class="face-box" id="face-box"></div>
+                    </div>
+                    <div class="image-info">
+                        <div class="image-title" id="image-title">Select an emotion zone to begin</div>
+                        <div class="emotion-stats" id="emotion-stats">
+                            <!-- Emotion bars will be inserted here -->
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="info-panel">
+                    <div class="info-box">
+                        <div class="info-title">About This Project</div>
+                        <div class="info-content">
+                            This explorer uses facial emotion detection to analyze artworks. Each artwork is placed on a grid based on the detected emotions.
+                        </div>
+                    </div>
+                    <div class="info-box">
+                        <div class="info-title">How to Use</div>
+                        <div class="info-content">
+                            Click on the emotion grid or use the sliders to select an emotion zone. A random artwork from that zone will be displayed with emotion percentages.
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="controls">
+                <div class="emotion-map-container">
+                    <div class="map-header">
+                        <div class="map-title">Emotion Map</div>
+                        <div class="grid-coordinates" id="grid-coords">10,10</div>
+                    </div>
+                    <div class="emotion-grid" id="emotion-grid">
+                        <!-- Grid cells will be generated here -->
+                    </div>
+                    <div class="legend">
+                        <div class="legend-item">
+                            <div class="legend-color" style="background-color: #1a5276;"></div>
+                            <span>Few images</span>
+                        </div>
+                        <div class="legend-item">
+                            <div class="legend-color" style="background-color: #3498db;"></div>
+                            <span>Medium</span>
+                        </div>
+                        <div class="legend-item">
+                            <div class="legend-color" style="background-color: #2ecc71;"></div>
+                            <span>Many images</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="sliders-container">
+                    <div class="slider-control">
+                        <div class="slider-label">
+                            <span class="slider-name">X: Angry ↔ Happy</span>
+                            <span class="slider-value" id="slider-x-value">10</span>
+                        </div>
+                        <input type="range" id="slider-x" min="0" max="19" value="10">
+                    </div>
+                    
+                    <div class="slider-control">
+                        <div class="slider-label">
+                            <span class="slider-name">Y: Sad ↔ Fear</span>
+                            <span class="slider-value" id="slider-y-value">10</span>
+                        </div>
+                        <input type="range" id="slider-y" min="0" max="19" value="10">
+                    </div>
+                    
+                    <div class="actions">
+                        <button id="random-btn">Random Image</button>
+                        <button id="random-cell">Random Zone</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <footer>
+            <p>Art Emotion Explorer | Facial emotion analysis of artworks</p>
+            <p>Uses DeepFace emotion detection to analyze facial expressions in art</p>
+        </footer>
+    </div>
+
+    <script src="faces.js"></script>
+</body>
+</html>
