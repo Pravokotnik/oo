@@ -66,7 +66,7 @@ function App() {
     const urls: { [key: string]: string } = {
       canvas: './hough.html',
       vase: './object_viewer.html',
-      face: './run-faces',
+      face: './faces.html',
       palette: './hsl_color_viewer.html',
       poses: './run-poses'
     };
