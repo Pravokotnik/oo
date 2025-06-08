@@ -68,7 +68,7 @@ function App() {
       vase: './object_viewer.html',
       face: './faces.html',
       palette: './hsl_color_viewer.html',
-      poses: './run-poses'
+      poses: './poses.html'
     };
     const url = urls[annotationId];
     if (!url) return;
