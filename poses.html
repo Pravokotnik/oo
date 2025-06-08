@@ -93,12 +93,13 @@
             background: #000;
             border-radius: var(--radius);
             overflow: hidden;
+            min-height: 400px; /* Ensure minimum height for visibility */
         }
 
         #pose-image {
             max-width: 100%;
             max-height: 100%;
-            object-fit: contain;
+            object-fit: contain; /* This ensures the image maintains aspect ratio */
         }
 
         #pose-overlay {
@@ -647,8 +648,11 @@
                 
                 // Wait for image to load before drawing landmarks
                 poseImage.onload = () => {
-                    // Draw pose connections
-                    drawPoseConnections(landmarks, poseImage.naturalWidth, poseImage.naturalHeight);
+                    // Draw pose connections after image is fully loaded and sized
+                    setTimeout(() => {
+                        // The timeout ensures the browser has calculated the final dimensions
+                        drawPoseConnections(landmarks, poseImage.naturalWidth, poseImage.naturalHeight);
+                    }, 100);
                     
                     // Release the blob URL to free memory
                     if (imageUrl) URL.revokeObjectURL(imageUrl);
@@ -778,10 +782,23 @@
         function drawPoseConnections(landmarks, imageWidth, imageHeight) {
             const canvas = document.getElementById('pose-overlay');
             const ctx = canvas.getContext('2d');
+            const img = document.getElementById('pose-image');
             
-            // Set canvas size to match the image
-            canvas.width = imageWidth;
-            canvas.height = imageHeight;
+            // Get the actual displayed dimensions and position of the image
+            const imgRect = img.getBoundingClientRect();
+            const containerRect = img.parentElement.getBoundingClientRect();
+            
+            // Calculate image offset within container (for centering)
+            const offsetLeft = imgRect.left - containerRect.left;
+            const offsetTop = imgRect.top - containerRect.top;
+            
+            // Set canvas size to match the container
+            canvas.width = containerRect.width;
+            canvas.height = containerRect.height;
+            
+            // Calculate scaling factors between original image and displayed image
+            const scaleX = imgRect.width / imageWidth;
+            const scaleY = imgRect.height / imageHeight;
             
             // Clear previous drawings
             ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -790,7 +807,7 @@
             
             // Draw connections (green lines)
             ctx.strokeStyle = 'rgba(0, 255, 0, 0.7)';
-            ctx.lineWidth = 3;
+            ctx.lineWidth = Math.max(2, 3 * Math.min(scaleX, scaleY)); // Scale line width
             
             POSE_CONNECTIONS.forEach(connection => {
                 const startIdx = connection[0];
@@ -801,10 +818,11 @@
                     landmarks[startIdx].visibility > 0.5 && 
                     landmarks[endIdx].visibility > 0.5) {
                     
-                    const startX = landmarks[startIdx].x * imageWidth;
-                    const startY = landmarks[startIdx].y * imageHeight;
-                    const endX = landmarks[endIdx].x * imageWidth;
-                    const endY = landmarks[endIdx].y * imageHeight;
+                    // Scale coordinates to match displayed image size and position
+                    const startX = landmarks[startIdx].x * imageWidth * scaleX + offsetLeft;
+                    const startY = landmarks[startIdx].y * imageHeight * scaleY + offsetTop;
+                    const endX = landmarks[endIdx].x * imageWidth * scaleX + offsetLeft;
+                    const endY = landmarks[endIdx].y * imageHeight * scaleY + offsetTop;
                     
                     ctx.beginPath();
                     ctx.moveTo(startX, startY);
@@ -817,15 +835,31 @@
             ctx.fillStyle = 'rgba(255, 0, 0, 0.8)';
             landmarks.forEach(landmark => {
                 if (landmark.visibility > 0.5) {
-                    const x = landmark.x * imageWidth;
-                    const y = landmark.y * imageHeight;
+                    // Scale coordinates to match displayed image size and position
+                    const x = landmark.x * imageWidth * scaleX + offsetLeft;
+                    const y = landmark.y * imageHeight * scaleY + offsetTop;
+                    
+                    const pointRadius = Math.max(3, 4 * Math.min(scaleX, scaleY)); // Scale point size
                     
                     ctx.beginPath();
-                    ctx.arc(x, y, 4, 0, 2 * Math.PI);
+                    ctx.arc(x, y, pointRadius, 0, 2 * Math.PI);
                     ctx.fill();
                 }
             });
         }
+
+        // Add this after your other event listeners
+        window.addEventListener('resize', () => {
+            if (currentLandmarks && poseImage.complete) {
+                setTimeout(() => {
+                    drawPoseConnections(
+                        currentLandmarks,
+                        poseImage.naturalWidth,
+                        poseImage.naturalHeight
+                    );
+                }, 100); // Small delay to ensure image dimensions are calculated
+            }
+        });
     </script>
 </body>
 </html>
