@@ -1,0 +1,831 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Art Pose Explorer</title>
+    <style>
+        :root {
+            --bg-color: #1e1e2e;
+            --card-bg: #2a2a3e;
+            --accent: #7f5af0;
+            --accent-hover: #6d4de0;
+            --text: #e0def4;
+            --subtext: #a6adc8;
+            --border: #3e3e5e;
+            --radius: 10px;
+            --transition: 0.2s;
+        }
+
+        *, *::before, *::after {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, sans-serif;
+            background: var(--bg-color);
+            color: var(--text);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        h1 {
+            font-size: 2rem;
+            margin-bottom: 10px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+
+        .subtitle {
+            font-size: 1.2rem;
+            opacity: 0.8;
+            max-width: 700px;
+            text-align: center;
+            margin: 0 auto 20px auto;
+        }
+
+        #app-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            grid-gap: 20px;
+            width: 100%;
+            max-width: 1400px;
+        }
+
+        .panel {
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 20px;
+            position: relative;
+        }
+
+        #umap-container {
+            height: 600px;
+            position: relative;
+        }
+
+        #umap-canvas {
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: var(--radius);
+            cursor: crosshair;
+        }
+
+        #pose-container {
+            display: flex;
+            flex-direction: column;
+            height: 600px;
+        }
+
+        .pose-display-wrapper {
+            position: relative;
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #000;
+            border-radius: var(--radius);
+            overflow: hidden;
+        }
+
+        #pose-image {
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain;
+        }
+
+        #pose-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+        }
+
+        .image-info {
+            margin-top: 10px;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: var(--radius);
+            padding: 15px;
+            font-size: 0.9rem;
+        }
+
+        .controls {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+            flex-wrap: wrap;
+        }
+
+        button {
+            background: var(--accent);
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: var(--radius);
+            cursor: pointer;
+            transition: background var(--transition);
+            font-size: 0.9rem;
+        }
+
+        button:hover {
+            background: var(--accent-hover);
+        }
+
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.8);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            color: white;
+        }
+
+        .spinner {
+            border: 4px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top: 4px solid white;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin-bottom: 20px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .direction-indicators {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 20; /* Ensure it's above everything */
+        }
+
+        .direction-arrow {
+            position: absolute;
+            width: 80px;
+            height: 4px;
+            background: rgba(255, 255, 255, 0.8); /* Brighter for visibility */
+            transform-origin: left center; 
+            opacity: 0;
+            z-index: 30;
+            pointer-events: none;
+            box-shadow: 0 0 5px rgba(0, 0, 0, 0.7);
+        }
+
+        /* Make the arrowhead more visible */
+        .direction-arrow:after {
+            content: '';
+            position: absolute;
+            right: -10px;
+            top: -8px;
+            width: 0;
+            height: 0;
+            border-left: 16px solid rgba(255, 255, 255, 0.6);
+            border-top: 10px solid transparent;
+            border-bottom: 10px solid transparent;
+        }
+
+        .direction-arrow.visible {
+            opacity: 1;
+        }
+
+        .key-help {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 15px;
+            border-radius: var(--radius);
+            margin-top: 20px;
+            font-size: 0.9rem;
+            grid-column: 1 / -1;
+        }
+
+        .key-help h3 {
+            margin-bottom: 10px;
+            color: var(--accent);
+        }
+
+        .key-help kbd {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: monospace;
+            margin: 0 3px;
+        }
+
+        #status-message {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: var(--card-bg);
+            padding: 10px 20px;
+            border-radius: var(--radius);
+            font-size: 0.9rem;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            z-index: 100;
+        }
+
+        #status-message.visible {
+            opacity: 1;
+        }
+
+        @media (max-width: 1000px) {
+            #app-container {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="loading-overlay" id="loading-overlay">
+        <div class="spinner"></div>
+        <div id="loading-text">Loading pose data...</div>
+    </div>
+
+    <h1>Art Pose Explorer</h1>
+    <p class="subtitle">Explore artworks based on pose similarity using UMAP visualization</p>
+
+    <div id="app-container">
+        <div class="panel">
+            <h2>UMAP Pose Space</h2>
+            <div id="umap-container">
+                <canvas id="umap-canvas"></canvas>
+                <div class="direction-indicators">
+                    <div class="direction-arrow" id="direction-arrow"></div>
+                </div>
+            </div>
+            <div class="controls">
+                <button id="random-pose-btn">Random Pose</button>
+                <button id="rotate-left-btn">Rotate Left</button>
+                <button id="rotate-right-btn">Rotate Right</button>
+                <button id="increase-step-btn">Increase Step</button>
+                <button id="decrease-step-btn">Decrease Step</button>
+            </div>
+        </div>
+
+        <div class="panel">
+            <h2>Current Pose</h2>
+            <div id="pose-container">
+                <div class="pose-display-wrapper" style="position: relative; flex: 1;">
+                    <img id="pose-image" src="" alt="Pose image">
+                    <canvas id="pose-overlay" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none;"></canvas>
+                </div>
+                <div class="image-info" id="image-info">Select a pose in the UMAP visualization</div>
+            </div>
+            <div class="controls">
+                <button id="next-pose-btn">Next Similar Pose</button>
+                <button id="toggle-landmarks-btn">Toggle Landmarks</button>
+            </div>
+        </div>
+
+        <div class="key-help">
+            <h3>Keyboard Controls</h3>
+            <p>
+                <kbd>R</kbd> Random pose
+                <kbd>N</kbd> Next similar pose
+                <kbd>A</kbd> Rotate direction left
+                <kbd>D</kbd> Rotate direction right
+                <kbd>W</kbd> Increase step size
+                <kbd>S</kbd> Decrease step size
+                <kbd>L</kbd> Toggle landmarks
+            </p>
+        </div>
+    </div>
+
+    <div id="status-message"></div>
+
+    <script>
+        // Configuration
+        const API_BASE_URL = 'http://localhost:7000';
+        
+        // State
+        let umapData = null;
+        let currentPoseId = null;
+        let direction = [1.0, 0]; // Default direction vector
+        let stepSize = 0.5;
+        let showLandmarks = true;
+        let currentLandmarks = null;
+        
+        // DOM Elements
+        const loadingOverlay = document.getElementById('loading-overlay');
+        const loadingText = document.getElementById('loading-text');
+        const umapCanvas = document.getElementById('umap-canvas');
+        const umapCtx = umapCanvas.getContext('2d');
+        const poseImage = document.getElementById('pose-image');
+        const imageInfo = document.getElementById('image-info');
+        const statusMessage = document.getElementById('status-message');
+        const directionArrow = document.getElementById('direction-arrow');
+        
+        // Buttons
+        const randomPoseBtn = document.getElementById('random-pose-btn');
+        const nextPoseBtn = document.getElementById('next-pose-btn');
+        const rotateLeftBtn = document.getElementById('rotate-left-btn');
+        const rotateRightBtn = document.getElementById('rotate-right-btn');
+        const increaseStepBtn = document.getElementById('increase-step-btn');
+        const decreaseStepBtn = document.getElementById('decrease-step-btn');
+        const toggleLandmarksBtn = document.getElementById('toggle-landmarks-btn');
+
+        // Initialize app when DOM is loaded
+        document.addEventListener('DOMContentLoaded', () => {
+            resizeCanvas();
+            initEventListeners();
+            loadUmapData();
+        });
+
+        // Handle window resize
+        window.addEventListener('resize', resizeCanvas);
+
+        // Initialize event listeners
+        function initEventListeners() {
+            // Canvas click event
+            umapCanvas.addEventListener('click', handleCanvasClick);
+            
+            // Button events
+            randomPoseBtn.addEventListener('click', () => selectRandomPose());
+            nextPoseBtn.addEventListener('click', () => findNextPose());
+            rotateLeftBtn.addEventListener('click', () => rotateDirection(-15));
+            rotateRightBtn.addEventListener('click', () => rotateDirection(15));
+            increaseStepBtn.addEventListener('click', () => changeStepSize(1.2));
+            decreaseStepBtn.addEventListener('click', () => changeStepSize(0.8));
+            toggleLandmarksBtn.addEventListener('click', () => toggleLandmarks());
+            
+            // Keyboard events
+            document.addEventListener('keydown', (e) => {
+                switch(e.key.toLowerCase()) {
+                    case 'r': selectRandomPose(); break;
+                    case 'n': findNextPose(); break;
+                    case 'a': rotateDirection(-15); break;
+                    case 'd': rotateDirection(15); break;
+                    case 'w': changeStepSize(1.2); break;
+                    case 's': changeStepSize(0.8); break;
+                    case 'l': toggleLandmarks(); break;
+                }
+            });
+        }
+
+        // Resize canvas to fit container
+        function resizeCanvas() {
+            const container = umapCanvas.parentElement;
+            umapCanvas.width = container.clientWidth;
+            umapCanvas.height = container.clientHeight;
+            
+            // If we have data, redraw
+            if (umapData) {
+                drawUmap();
+            }
+        }
+
+        // Display a temporary status message
+        function showStatusMessage(message, duration = 3000) {
+            statusMessage.textContent = message;
+            statusMessage.classList.add('visible');
+            
+            setTimeout(() => {
+                statusMessage.classList.remove('visible');
+            }, duration);
+        }
+
+        // Load UMAP data from API
+        async function loadUmapData() {
+            try {
+                loadingText.textContent = 'Loading UMAP data...';
+                const response = await fetch(`${API_BASE_URL}/api/umap`);
+                
+                if (!response.ok) {
+                    throw new Error(`Failed to load UMAP data: ${response.statusText}`);
+                }
+                
+                const data = await response.json();
+                umapData = {
+                    embedding: data.embedding.map(point => [point[0], point[1]]),
+                    keys: data.keys
+                };
+                
+                // Process the embedding to get bounds
+                const xCoords = umapData.embedding.map(p => p[0]);
+                const yCoords = umapData.embedding.map(p => p[1]);
+                
+                umapData.bounds = {
+                    minX: Math.min(...xCoords),
+                    maxX: Math.max(...xCoords),
+                    minY: Math.min(...yCoords),
+                    maxY: Math.max(...yCoords)
+                };
+                
+                // Add some padding to bounds
+                const xPadding = (umapData.bounds.maxX - umapData.bounds.minX) * 0.05;
+                const yPadding = (umapData.bounds.maxY - umapData.bounds.minY) * 0.05;
+                
+                umapData.bounds.minX -= xPadding;
+                umapData.bounds.maxX += xPadding;
+                umapData.bounds.minY -= yPadding;
+                umapData.bounds.maxY += yPadding;
+                
+                drawUmap();
+                selectRandomPose();
+                
+                // Hide loading overlay
+                loadingOverlay.style.display = 'none';
+                
+            } catch (error) {
+                console.error('Error loading UMAP data:', error);
+                loadingText.textContent = `Error: ${error.message}. Please refresh to retry.`;
+            }
+        }
+
+        // Draw UMAP visualization on canvas
+        function drawUmap() {
+            if (!umapData) return;
+            
+            const ctx = umapCtx;
+            const width = umapCanvas.width;
+            const height = umapCanvas.height;
+            
+            // Clear canvas
+            ctx.clearRect(0, 0, width, height);
+            
+            // Draw points
+            umapData.embedding.forEach((point, index) => {
+                const x = mapValueToRange(
+                    point[0], 
+                    umapData.bounds.minX, umapData.bounds.maxX, 
+                    20, width - 20
+                );
+                
+                const y = mapValueToRange(
+                    point[1], 
+                    umapData.bounds.minY, umapData.bounds.maxY, 
+                    20, height - 20
+                );
+                
+                // Highlight current point
+                if (currentPoseId && umapData.keys[index] === currentPoseId) {
+                    ctx.fillStyle = '#e74c3c'; // Red for selected
+                    ctx.beginPath();
+                    ctx.arc(x, y, 6, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+                
+                // Draw all points
+                ctx.fillStyle = 'rgba(127, 90, 240, 0.7)'; // Purple
+                ctx.beginPath();
+                ctx.arc(x, y, 3, 0, Math.PI * 2);
+                ctx.fill();
+            });
+            
+            // Update direction arrow position and rotation
+            updateDirectionArrow();
+        }
+
+        // Update direction arrow visualization
+        function updateDirectionArrow() {
+            if (!currentPoseId || !umapData) {
+                directionArrow.classList.remove('visible');
+                return;
+            }
+            
+            // Find the current pose index
+            const currentIndex = umapData.keys.indexOf(currentPoseId);
+            if (currentIndex === -1) return;
+            
+            // Get the current pose position in UMAP space
+            const currentPoint = umapData.embedding[currentIndex];
+            
+            // Convert to canvas coordinates
+            const canvasX = mapValueToRange(
+                currentPoint[0],
+                umapData.bounds.minX, umapData.bounds.maxX,
+                20, umapCanvas.width - 20
+            );
+            
+            const canvasY = mapValueToRange(
+                currentPoint[1],
+                umapData.bounds.minY, umapData.bounds.maxY,
+                20, umapCanvas.height - 20
+            );
+            
+            // Position the arrow at the current pose point
+            directionArrow.style.left = `${canvasX}px`;
+            directionArrow.style.top = `${canvasY}px`;
+            
+            // Update the angle
+            const angle = Math.atan2(direction[1], direction[0]) * (180 / Math.PI);
+            
+            // Scale arrow length based on step size (base is 80px at step 0.5)
+            const baseLength = 80;
+            const scaleFactor = stepSize / 0.5; // 0.5 is our default step size
+            const arrowLength = baseLength * scaleFactor;
+            
+            // Apply both rotation and length
+            directionArrow.style.width = `${arrowLength}px`;
+            directionArrow.style.transform = `rotate(${angle}deg)`;
+            
+            // Also scale the arrowhead size proportionately
+            const arrowhead = directionArrow.querySelector(':after') || directionArrow;
+            if (scaleFactor > 1) {
+                // Make the arrow color more intense for larger steps
+                directionArrow.style.background = `rgba(255, ${Math.max(0, 255 - scaleFactor * 100)}, ${Math.max(0, 255 - scaleFactor * 100)}, 0.8)`;
+            } else {
+                directionArrow.style.background = `rgba(255, 255, 255, 0.8)`;
+            }
+            
+            // Make the arrow visible
+            directionArrow.classList.add('visible');
+        }
+
+        // Map a value from one range to another
+        function mapValueToRange(value, inMin, inMax, outMin, outMax) {
+            return ((value - inMin) * (outMax - outMin)) / (inMax - inMin) + outMin;
+        }
+
+        // Handle click on the UMAP canvas
+        function handleCanvasClick(event) {
+            if (!umapData) return;
+            
+            const rect = umapCanvas.getBoundingClientRect();
+            const clickX = event.clientX - rect.left;
+            const clickY = event.clientY - rect.top;
+            
+            // Convert canvas coordinates to UMAP space
+            const umapX = mapValueToRange(
+                clickX,
+                20, umapCanvas.width - 20,
+                umapData.bounds.minX, umapData.bounds.maxX
+            );
+            
+            const umapY = mapValueToRange(
+                clickY,
+                20, umapCanvas.height - 20,
+                umapData.bounds.minY, umapData.bounds.maxY
+            );
+            
+            // Find nearest pose
+            findNearestPose(umapX, umapY);
+        }
+
+        // Find and select nearest pose to a point
+        async function findNearestPose(x, y) {
+            try {
+                const response = await fetch(`${API_BASE_URL}/api/nearest-pose?x=${x}&y=${y}`);
+                
+                if (!response.ok) {
+                    throw new Error(`Failed to find nearest pose: ${response.statusText}`);
+                }
+                
+                const data = await response.json();
+                selectPose(data.pose_id);
+                
+            } catch (error) {
+                console.error('Error finding nearest pose:', error);
+                showStatusMessage(`Error: ${error.message}`);
+            }
+        }
+
+        // Select a pose by ID
+        async function selectPose(poseId) {
+            if (!poseId) return;
+            
+            try {
+                // Show loading indicator
+                poseImage.src = '';
+                imageInfo.textContent = 'Loading pose...';
+                
+                // Get pose details with landmarks
+                const detailsResponse = await fetch(`${API_BASE_URL}/api/pose/${poseId}`);
+                
+                if (!detailsResponse.ok) {
+                    throw new Error(`Failed to load pose details: ${detailsResponse.statusText}`);
+                }
+                
+                const details = await detailsResponse.json();
+                const imagePath = details.img_path;
+                const landmarks = details.landmarks;
+                const filename = imagePath.split('/').pop();
+                
+                // Get the raw image (without landmarks)
+                const imageResponse = await fetch(`${API_BASE_URL}/images/${poseId}`);
+                
+                if (!imageResponse.ok) {
+                    // Fallback to image with pre-drawn landmarks
+                    const fallbackResponse = await fetch(`${API_BASE_URL}/api/pose-image/${poseId}`);
+                    if (!fallbackResponse.ok) {
+                        throw new Error(`Failed to load pose image: ${fallbackResponse.statusText}`);
+                    }
+                    const data = await fallbackResponse.json();
+                    poseImage.src = data.image_data;
+                } else {
+                    // Create a blob URL from the image response
+                    const blob = await imageResponse.blob();
+                    const imageUrl = URL.createObjectURL(blob);
+                    poseImage.src = imageUrl;
+                }
+                
+                // Wait for image to load before drawing landmarks
+                poseImage.onload = () => {
+                    // Draw pose connections
+                    drawPoseConnections(landmarks, poseImage.naturalWidth, poseImage.naturalHeight);
+                    
+                    // Release the blob URL to free memory
+                    if (imageUrl) URL.revokeObjectURL(imageUrl);
+                };
+                
+                imageInfo.textContent = `Image: ${filename}`;
+                
+                // Update state
+                currentPoseId = poseId;
+                currentLandmarks = landmarks;
+                
+                // Redraw UMAP with highlighted point
+                drawUmap();
+                
+            } catch (error) {
+                console.error('Error selecting pose:', error);
+                imageInfo.textContent = `Error: ${error.message}`;
+            }
+        }
+
+        // Select a random pose
+        function selectRandomPose() {
+            if (!umapData || !umapData.keys.length) return;
+            
+            const randomIndex = Math.floor(Math.random() * umapData.keys.length);
+            const randomPoseId = umapData.keys[randomIndex];
+            
+            selectPose(randomPoseId);
+            showStatusMessage('Selected random pose');
+        }
+
+        // Find and select the next pose in current direction
+        function findNextPose() {
+            if (!currentPoseId || !umapData) return;
+            
+            // Find current pose index
+            const currentIndex = umapData.keys.indexOf(currentPoseId);
+            if (currentIndex === -1) return;
+            
+            // Get current pose embedding
+            const currentPos = umapData.embedding[currentIndex];
+            
+            // Calculate target position
+            const targetPos = [
+                currentPos[0] + direction[0] * stepSize,
+                currentPos[1] + direction[1] * stepSize
+            ];
+            
+            // Find nearest pose to target position
+            let nearestIndex = -1;
+            let minDistance = Infinity;
+            
+            umapData.embedding.forEach((pos, index) => {
+                if (index === currentIndex) return; // Skip current pose
+                
+                const dx = pos[0] - targetPos[0];
+                const dy = pos[1] - targetPos[1];
+                const distance = Math.sqrt(dx * dx + dy * dy);
+                
+                if (distance < minDistance) {
+                    minDistance = distance;
+                    nearestIndex = index;
+                }
+            });
+            
+            if (nearestIndex !== -1) {
+                const nextPoseId = umapData.keys[nearestIndex];
+                selectPose(nextPoseId);
+                showStatusMessage('Found next similar pose');
+            }
+        }
+
+        // Rotate direction vector
+        function rotateDirection(degrees) {
+            const radians = degrees * (Math.PI / 180);
+            const cos = Math.cos(radians);
+            const sin = Math.sin(radians);
+            
+            const newX = direction[0] * cos - direction[1] * sin;
+            const newY = direction[0] * sin + direction[1] * cos;
+            
+            direction = [newX, newY];
+            updateDirectionArrow();
+            
+            showStatusMessage(`Rotated direction ${degrees > 0 ? 'right' : 'left'}`);
+        }
+
+        // Change step size
+        function changeStepSize(factor) {
+            stepSize *= factor;
+            
+            // Keep step size within reasonable bounds
+            stepSize = Math.max(0.1, Math.min(stepSize, 2.0));
+            updateDirectionArrow();
+            
+            showStatusMessage(`Step size: ${stepSize.toFixed(2)}`);
+        }
+
+        // Toggle landmark display
+        function toggleLandmarks() {
+            showLandmarks = !showLandmarks;
+            
+            // Re-draw landmarks on the current image
+            if (poseImage.complete && currentLandmarks) {
+                drawPoseConnections(
+                    currentLandmarks, 
+                    poseImage.naturalWidth, 
+                    poseImage.naturalHeight
+                );
+            }
+            
+            showStatusMessage(`Landmarks: ${showLandmarks ? 'on' : 'off'}`);
+        }
+
+        // Define the pose landmark connections (similar to mp_pose.POSE_CONNECTIONS)
+        const POSE_CONNECTIONS = [
+            [0, 1], [1, 2], [2, 3], [3, 7], [0, 4], [4, 5], [5, 6], [6, 8], // Face
+            [9, 10], // Shoulders
+            [11, 12], // Hips
+            [11, 13], [13, 15], [15, 17], [17, 19], [19, 15], [15, 21], // Left leg
+            [12, 14], [14, 16], [16, 18], [18, 20], [20, 16], [16, 22], // Right leg
+            [11, 23], [23, 25], [25, 27], [27, 29], [27, 31], // Left arm
+            [12, 24], [24, 26], [26, 28], [28, 30], [28, 32] // Right arm
+        ];
+
+        // Function to draw pose connections
+        function drawPoseConnections(landmarks, imageWidth, imageHeight) {
+            const canvas = document.getElementById('pose-overlay');
+            const ctx = canvas.getContext('2d');
+            
+            // Set canvas size to match the image
+            canvas.width = imageWidth;
+            canvas.height = imageHeight;
+            
+            // Clear previous drawings
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            if (!showLandmarks || !landmarks) return;
+            
+            // Draw connections (green lines)
+            ctx.strokeStyle = 'rgba(0, 255, 0, 0.7)';
+            ctx.lineWidth = 3;
+            
+            POSE_CONNECTIONS.forEach(connection => {
+                const startIdx = connection[0];
+                const endIdx = connection[1];
+                
+                // Make sure both landmarks exist and are visible
+                if (landmarks[startIdx] && landmarks[endIdx] && 
+                    landmarks[startIdx].visibility > 0.5 && 
+                    landmarks[endIdx].visibility > 0.5) {
+                    
+                    const startX = landmarks[startIdx].x * imageWidth;
+                    const startY = landmarks[startIdx].y * imageHeight;
+                    const endX = landmarks[endIdx].x * imageWidth;
+                    const endY = landmarks[endIdx].y * imageHeight;
+                    
+                    ctx.beginPath();
+                    ctx.moveTo(startX, startY);
+                    ctx.lineTo(endX, endY);
+                    ctx.stroke();
+                }
+            });
+            
+            // Draw landmark points (red dots)
+            ctx.fillStyle = 'rgba(255, 0, 0, 0.8)';
+            landmarks.forEach(landmark => {
+                if (landmark.visibility > 0.5) {
+                    const x = landmark.x * imageWidth;
+                    const y = landmark.y * imageHeight;
+                    
+                    ctx.beginPath();
+                    ctx.arc(x, y, 4, 0, 2 * Math.PI);
+                    ctx.fill();
+                }
+            });
+        }
+    </script>
+</body>
+</html>
