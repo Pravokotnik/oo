@@ -815,8 +815,8 @@
                 
                 // Make sure both landmarks exist and are visible
                 if (landmarks[startIdx] && landmarks[endIdx] && 
-                    landmarks[startIdx].visibility > 0.5 && 
-                    landmarks[endIdx].visibility > 0.5) {
+                    landmarks[startIdx].visibility > 0.1 && 
+                    landmarks[endIdx].visibility > 0.1) {
                     
                     // Scale coordinates to match displayed image size and position
                     const startX = landmarks[startIdx].x * imageWidth * scaleX + offsetLeft;
