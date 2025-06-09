@@ -307,3 +307,33 @@ window.addEventListener('resize', () => {
 
 // Start the application
 window.addEventListener('DOMContentLoaded', init);
+
+
+
+// --- Modal helper ---
+function setupModal(buttonId, modalId) {
+  const btn   = document.getElementById(buttonId);
+  const modal = document.getElementById(modalId);
+  const close = modal.querySelector('.modal-close');
+
+  btn.addEventListener('click', () => {
+    modal.classList.add('active');
+  });
+
+  close.addEventListener('click', () => {
+    modal.classList.remove('active');
+  });
+
+  // click outside content to close
+  modal.addEventListener('click', e => {
+    if (e.target === modal) {
+      modal.classList.remove('active');
+    }
+  });
+}
+
+// initialize your two modals after DOM is ready
+window.addEventListener('DOMContentLoaded', () => {
+  setupModal('btn-about',  'modal-about');
+  setupModal('btn-howto',  'modal-howto');
+});

@@ -412,3 +412,85 @@ footer {
     font-size: 0.95rem;
     line-height: 1.5;
 }
+
+
+
+/* Modal backdrop */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  z-index: 1000;
+}
+.modal-overlay.active {
+  pointer-events: all;
+  opacity: 1;
+}
+
+/* Modal box */
+.modal-content {
+  background: var(--card-bg);
+  border-radius: var(--radius);
+  padding: 30px;
+  max-width: 500px;
+  width: 90%;
+  max-height: 80vh;
+  overflow-y: auto;
+  position: relative;
+  box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+}
+
+/* Close button */
+.modal-close {
+  position: absolute;
+  top: 15px;
+  right: 15px;
+  background: none;
+  border: none;
+  color: var(--subtext);
+  font-size: 1.5rem;
+  cursor: pointer;
+  transition: color 0.2s;
+}
+.modal-close:hover {
+  color: var(--text);
+}
+
+/* Change the modal title text to blue */
+.modal-title {
+  color: var(--secondary) !important;
+}
+
+/* If you have a header bar behind the title, override that too: */
+.modal-content .modal-header {
+  background: var(--secondary);
+}
+
+/* And if you want the close-“×” to match: */
+.modal-close {
+  color: var(--secondary);
+}
+.modal-close:hover {
+  color: var(--text);
+}
+
+
+.about-btn {
+  background: var(--secondary);
+  color: #fff;
+  padding: 0.5rem 1.5rem;
+  border: none;
+  border-radius: 1.5rem;      /* <-- bigger radius for rounder ends */
+  cursor: pointer;
+  transition: background var(--transition);
+}
+
+.about-btn:hover {
+  background: #2980b9;
+}

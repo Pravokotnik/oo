@@ -4,40 +4,452 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Histogram Image Explorer</title>
-    <link rel="stylesheet" href="styles.css">
+    <style>
+        :root {
+            --bg-color: #1e1e2e;
+            --card-bg: #2a2a3e;
+            --accent: #7f5af0;
+            --accent-hover: #6d4de0;
+            --text: #e0def4;
+            --subtext: #a6adc8;
+            --border: #3e3e5e;
+            --radius: 10px;
+            --transition: 0.2s;
+        }
+
+        *, *::before, *::after {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, sans-serif;
+            background: var(--bg-color);
+            color: var(--text);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        h1 {
+            font-size: 2rem;
+            margin-bottom: 10px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+
+        #container {
+            display: flex;
+            flex-direction: column;
+            max-width: 1200px;
+            width: 100%;
+            background: var(--card-bg);
+            border-radius: var(--radius);
+            padding: 20px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        }
+
+        #loading-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: var(--bg-color);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+
+        .progress-container {
+            width: 300px;
+            height: 20px;
+            background: var(--border);
+            border-radius: var(--radius);
+            overflow: hidden;
+            margin-bottom: 20px;
+        }
+
+        .progress-bar {
+            height: 100%;
+            width: 0%;
+            background: var(--accent);
+            transition: width 0.3s ease;
+        }
+
+        #loading-status {
+            color: var(--text);
+            font-size: 1.2rem;
+        }
+
+        #app-container {
+            width: 100%;
+            display: none;
+        }
+
+        .split-view {
+            display: flex;
+            flex-direction: row;
+            gap: 20px;
+            width: 100%;
+        }
+
+        .image-panel, .histogram-panel {
+            flex: 1;
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 20px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+        }
+
+        #display-image {
+            max-width: 100%;
+            max-height: 500px;
+            display: block;
+            margin: 0 auto;
+            border-radius: var(--radius);
+        }
+
+        #image-info {
+            margin-top: 15px;
+            padding: 15px;
+            background: rgba(0,0,0,0.15);
+            border-radius: var(--radius);
+            border-left: 3px solid var(--accent);
+        }
+
+        #histogram-canvas {
+            width: 100%;
+            height: 400px;
+            background: var(--card-bg);
+            border-radius: var(--radius);
+        }
+
+        .controls {
+            margin-top: 20px;
+            padding: 15px;
+            background: rgba(0,0,0,0.15);
+            border-radius: var(--radius);
+            border-left: 3px solid var(--accent);
+        }
+
+        .control-row {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+            flex-wrap: wrap;
+        }
+
+        #distance-display {
+            margin-bottom: 15px;
+            font-size: 1rem;
+            padding: 8px;
+            background: rgba(127, 90, 240, 0.2);
+            border-radius: var(--radius);
+        }
+
+        select {
+            padding: 8px;
+            font-size: 16px;
+            border-radius: var(--radius);
+            border: 1px solid var(--border);
+            background: var(--card-bg);
+            color: var(--text);
+            flex: 1;
+        }
+
+        button {
+            padding: 8px 16px;
+            background-color: var(--accent);
+            color: white;
+            border: none;
+            border-radius: var(--radius);
+            cursor: pointer;
+            font-size: 16px;
+            transition: all var(--transition);
+            flex: 1;
+        }
+
+        button:hover:not(:disabled) {
+            background-color: var(--accent-hover);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+        }
+
+        .btn-group {
+            display: flex;
+            gap: 10px;
+            margin: 20px 0;
+            justify-content: center;
+        }
+
+        /* Modal styles */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.8);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s ease;
+        }
+        
+        .modal-overlay.active {
+            opacity: 1;
+            pointer-events: all;
+        }
+        
+        .modal-content {
+            background: var(--card-bg);
+            border-radius: var(--radius);
+            padding: 30px;
+            max-width: 800px;
+            max-height: 80vh;
+            overflow-y: auto;
+            width: 90%;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+            position: relative;
+        }
+        
+        .modal-close {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            background: none;
+            border: none;
+            color: var(--subtext);
+            font-size: 1.5rem;
+            cursor: pointer;
+            transition: color 0.2s;
+        }
+        
+        .modal-close:hover {
+            color: var(--text);
+        }
+        
+        .modal-title {
+            color: var(--accent);
+            margin-bottom: 20px;
+            font-size: 1.5rem;
+        }
+        
+        .method-explanation {
+            margin-bottom: 20px;
+        }
+        
+        .method-explanation h3 {
+            color: var(--accent);
+            margin-top: 20px;
+            margin-bottom: 10px;
+        }
+        
+        .method-explanation p {
+            margin-bottom: 10px;
+            line-height: 1.6;
+        }
+        
+        .method-explanation ul {
+            margin-left: 20px;
+            margin-bottom: 15px;
+        }
+        
+        .method-explanation li {
+            margin-bottom: 8px;
+        }
+        
+        .method-explanation code {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 2px 5px;
+            border-radius: 3px;
+            font-family: monospace;
+        }
+
+        @media (max-width: 768px) {
+            .split-view {
+                flex-direction: column;
+            }
+            
+            .control-row {
+                flex-direction: column;
+            }
+            
+            button, select {
+                width: 100%;
+            }
+        }
+    </style>
 </head>
 <body>
-    <div id="loading-screen">
-        <div class="progress-container">
-            <div id="progress-bar" class="progress-bar"></div>
+    <div id="container">
+        <h1>Histogram Image Explorer</h1>
+        
+        <div class="btn-group">
+            <button id="show-about">About</button>
+            <button id="show-explanation">How It Works</button>
         </div>
-        <div id="loading-status">Loading image data...</div>
-    </div>
 
-    <div id="app-container" style="display: none;">
-        <div class="split-view">
-            <div class="image-panel">
-                <img id="display-image" alt="Selected image">
-                <div id="image-info"></div>
+        <div id="loading-screen">
+            <div class="progress-container">
+                <div id="progress-bar" class="progress-bar"></div>
             </div>
-            <div class="histogram-panel">
-                <canvas id="histogram-canvas"></canvas>
-                <div class="controls">
-                    <div id="distance-display">Distance: -</div>
-                    <div class="control-row">
-                        <select id="metric-select">
-                            <option value="hellinger">Hellinger Distance</option>
-                            <option value="l2">L2 (Euclidean) Distance</option>
-                        </select>
-                    </div>
-                    <div class="control-row">
-                        <button id="random-btn">New Random Image</button>
-                        <button id="reset-btn">Reset Histogram</button>
+            <div id="loading-status">Loading image data...</div>
+        </div>
+
+        <div id="app-container" style="display: none;">
+            <div class="split-view">
+                <div class="image-panel">
+                    <img id="display-image" alt="Selected image">
+                    <div id="image-info"></div>
+                </div>
+                <div class="histogram-panel">
+                    <canvas id="histogram-canvas"></canvas>
+                    <div class="controls">
+                        <div id="distance-display">Distance: -</div>
+                        <div class="control-row">
+                            <select id="metric-select">
+                                <option value="hellinger">Hellinger Distance</option>
+                                <option value="l2">L2 (Euclidean) Distance</option>
+                            </select>
+                        </div>
+                        <div class="control-row">
+                            <button id="random-btn">New Random Image</button>
+                            <button id="reset-btn">Reset Histogram</button>
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
     </div>
+
+    <!-- Instructions Modal -->
+    <div id="about-modal" class="modal-overlay">
+        <div class="modal-content">
+            <button class="modal-close">&times;</button>
+            <h2 class="modal-title">ℹ️ About Histogram Comparison</h2>
+            <div class="method-explanation">
+                <h3>Color Histogram Analysis</h3>
+                <p>This tool compares images using their color distributions represented as histograms. Here's the technical process:</p>
+                
+                <h3>Histogram Calculation</h3>
+                <ol>
+                    <li>Each image is converted to RGB color space</li>
+                    <li>We divide the color space into 16 bins per channel (R, G, B)</li>
+                    <li>Pixel values are counted in each bin, creating a 3D histogram (16×16×16 = 4096 bins total)</li>
+                    <li>The histogram is normalized so the sum of all bins equals 1</li>
+                </ol>
+                
+                <h3>Distance Metrics</h3>
+                <p>We calculate image similarity using two mathematical approaches:</p>
+                <ul>
+                    <li><strong>Hellinger Distance:</strong>
+                        <ul>
+                            <li>Measures the similarity between two probability distributions</li>
+                            <li>Calculated as: H(P,Q) = √(1 - ∑√(Pᵢ·Qᵢ))</li>
+                            <li>Ranges from 0 (identical) to 1 (completely different)</li>
+                            <li>Particularly effective for comparing color distributions</li>
+                        </ul>
+                    </li>
+                    <li><strong>L2 (Euclidean) Distance:</strong>
+                        <ul>
+                            <li>Standard straight-line distance between histogram vectors</li>
+                            <li>Calculated as: L2(P,Q) = √∑(Pᵢ - Qᵢ)²</li>
+                            <li>More sensitive to large differences in individual bins</li>
+                        </ul>
+                    </li>
+                </ul>
+                
+                <h3>Visualization</h3>
+                <p>The histogram display shows:</p>
+                <ul>
+                    <li>X-axis represents the 256 possible color values (grouped into 16 bins)</li>
+                    <li>Y-axis shows the normalized frequency of pixels in each bin</li>
+                    <li>Separate lines for each color channel (Red, Green, Blue)</li>
+                    <li>Overlaid histograms when comparing two images</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Explanation Modal -->
+    <div id="explanation-modal" class="modal-overlay">
+        <div class="modal-content">
+            <button class="modal-close">&times;</button>
+            <h2 class="modal-title">How It Works</h2>
+            <div class="method-explanation">
+                <h3>Color Histograms</h3>
+                <p>The system analyzes images by:</p>
+                <ol>
+                    <li>Calculating color histograms for each image in RGB space</li>
+                    <li>Normalizing the histograms for comparison</li>
+                    <li>Storing pre-computed histogram data for efficient retrieval</li>
+                </ol>
+                
+                <h3>Technical Implementation</h3>
+                <p>The viewer works by:</p>
+                <ul>
+                    <li>Loading pre-processed histogram data from the dataset</li>
+                    <li>Using Canvas API to render the histogram visualizations</li>
+                    <li>Calculating distance metrics between histograms in real-time</li>
+                </ul>
+                
+                <h3>Distance Metrics</h3>
+                <ul>
+                    <li><strong>Hellinger Distance:</strong> Measures similarity between probability distributions (0 = identical, 1 = maximally different)</li>
+                    <li><strong>L2 (Euclidean) Distance:</strong> Standard Euclidean distance between histogram vectors</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
     <script src="app.js"></script>
+    <script>
+        // Modal elements
+        const aboutModal = document.getElementById('about-modal');
+        const explanationModal = document.getElementById('explanation-modal');
+        const showAboutBtn = document.getElementById('show-about');
+        const showExplanationBtn = document.getElementById('show-explanation');
+        const modalCloseBtns = document.querySelectorAll('.modal-close');
+        
+        // Event listeners for showing modals
+        showAboutBtn.addEventListener('click', () => aboutModal.classList.add('active'));
+        showExplanationBtn.addEventListener('click', () => explanationModal.classList.add('active'));
+        
+        // Modal close buttons
+        modalCloseBtns.forEach(btn => {
+            btn.addEventListener('click', () => {
+                aboutModal.classList.remove('active');
+                explanationModal.classList.remove('active');
+            });
+        });
+        
+        // Close modals when clicking outside content
+        [aboutModal, explanationModal].forEach(modal => {
+            modal.addEventListener('click', (e) => {
+                if (e.target === modal) {
+                    modal.classList.remove('active');
+                }
+            });
+        });
+        
+        // Close modals with Escape key
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                aboutModal.classList.remove('active');
+                explanationModal.classList.remove('active');
+            }
+        });
+    </script>
 </body>
 </html>
