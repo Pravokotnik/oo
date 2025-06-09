@@ -33,6 +33,9 @@ One terminal:
 `python hough_server.py`
 
 Second terminal:
+python poses_backend.py
+
+Third terminal:
 `python main.py`
 
 Lastly, visit:
