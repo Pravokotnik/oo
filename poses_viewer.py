@@ -197,7 +197,7 @@ def draw_pose(image, landmarks):
         start_idx, end_idx = connection
         pt1 = (int(landmarks[start_idx]['x']*w), int(landmarks[start_idx]['y']*h))
         pt2 = (int(landmarks[end_idx]['x']*w), int(landmarks[end_idx]['y']*h))
-        cv2.line(overlay, pt1, pt2, (0,255,0), 2)
+        cv2.line(overlay, pt1, pt2, (0,255,0), 5)
     
     for lm in landmarks:
         pt = (int(lm['x']*w), int(lm['y']*h))
@@ -228,6 +228,7 @@ def display_pose_sequence():
         current_key = keys[current_idx]
         current_data = valid_poses[current_key]
         img = cv2.imread(current_data['img_path'])
+        print(f"Displaying image: {current_data['img_path']}")
         
         if img is None:
             print(f"Could not load image: {current_data['img_path']}")

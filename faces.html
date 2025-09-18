@@ -59,20 +59,28 @@
                         <div class="map-title">Emotion Map</div>
                         <div class="grid-coordinates" id="grid-coords">10,10</div>
                     </div>
+                    <div class="emotion-name-row">
+                        <span class="emotion-name">Anger</span>
+                        <span class="emotion-name">Saddness</span>
+                    </div>
                     <div class="emotion-grid" id="emotion-grid">
                         <!-- Grid cells will be generated here -->
                     </div>
+                    <div class="emotion-name-row">
+                        <span class="emotion-name">Fear</span>
+                        <span class="emotion-name">Happiness</span>
+                    </div>
                     <div class="legend">
                         <div class="legend-item">
-                            <div class="legend-color" style="background-color: #1a5276;"></div>
+                            <div class="legend-color" style="background-color: rgb(30, 94, 126);"></div>
                             <span>Few images</span>
                         </div>
                         <div class="legend-item">
-                            <div class="legend-color" style="background-color: #3498db;"></div>
+                            <div class="legend-color" style="background-color: rgb(46, 142, 158);"></div>
                             <span>Medium</span>
                         </div>
                         <div class="legend-item">
-                            <div class="legend-color" style="background-color: #2ecc71;"></div>
+                            <div class="legend-color" style="background-color: rgb(66, 202, 198);"></div>
                             <span>Many images</span>
                         </div>
                     </div>
@@ -81,7 +89,7 @@
                 <div class="sliders-container">
                     <div class="slider-control">
                         <div class="slider-label">
-                            <span class="slider-name">X: Angry ↔ Happy</span>
+                            <span class="slider-name">X: Anger ↔ Saddness / Happiness</span>
                             <span class="slider-value" id="slider-x-value">10</span>
                         </div>
                         <input type="range" id="slider-x" min="0" max="19" value="10">
@@ -89,7 +97,7 @@
                     
                     <div class="slider-control">
                         <div class="slider-label">
-                            <span class="slider-name">Y: Sad ↔ Fear</span>
+                            <span class="slider-name">Y: Anger ↔ Fear / Happiness</span>
                             <span class="slider-value" id="slider-y-value">10</span>
                         </div>
                         <input type="range" id="slider-y" min="0" max="19" value="10">

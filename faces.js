@@ -66,7 +66,8 @@ async function loadMetadata() {
         
         // Initialize grid with counts from metadata
         for (const [coords, paths] of Object.entries(metadata.grid_index)) {
-            const [x, y] = coords.split(',').map(Number);
+            let [x, y] = coords.split(',').map(Number);
+
             grid[coords] = paths;
             
             // Update grid cell color

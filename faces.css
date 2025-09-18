@@ -183,6 +183,15 @@ h1 {
     font-weight: 600;
 }
 
+.emotion-name-row {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 8px;
+
+    font-weight: 600;
+    font-size: 1rem;
+}
+
 .grid-coordinates {
     background: rgba(26, 37, 47, 0.7);
     padding: 8px 15px;
@@ -218,6 +227,7 @@ h1 {
     background: var(--accent);
     box-shadow: 0 0 10px rgba(231, 76, 60, 0.7);
     z-index: 5;
+    background-color: rgb(255, 200, 200) !important;
 }
 
 .sliders-container {
