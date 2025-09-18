@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>Detected Faces Emotion Explorer</title>
+<style>
+  body { font-family: sans-serif; background: #222; color: white; text-align: center; }
+  #container { display: flex; flex-wrap: wrap; justify-content: center; margin-top: 20px; }
+  #grid { display: grid; grid-template-columns: repeat(20, 30px); grid-gap: 2px; }
+  .cell { width: 30px; height: 30px; background: #444; cursor: pointer; border: 1px solid #666; }
+  .cell.selected { border-color: yellow; }
+  #info { margin-top: 10px; }
+  #image-container { margin-top: 20px; position: relative; display: inline-block; }
+  #face-image { max-width: 400px; max-height: 400px; display: block; }
+  #face-canvas { position: absolute; top: 0; left: 0; pointer-events: none; }
+</style>
+</head>
+<body>
+
+<h1>Detected Faces Emotion Explorer</h1>
+
+<div id="container">
+  <div id="grid"></div>
+  <div id="info">
+    <div>Selected Cell: <span id="selected-cell">None</span></div>
+    <div id="emotion-details"></div>
+  </div>
+</div>
+
+<div id="image-container">
+  <img id="face-image" alt="Face" />
+  <canvas id="face-canvas"></canvas>
+</div>
+
+<script src="detected_faces_viewer.js"></script>
+</body>
+</html>

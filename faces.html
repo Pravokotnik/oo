@@ -37,22 +37,71 @@
                     </div>
                 </div>
                 
+
+
+
                 <div class="info-panel">
-                    <div class="info-box">
-                        <div class="info-title">About This Project</div>
-                        <div class="info-content">
-                            This explorer uses facial emotion detection to analyze artworks. Each artwork is placed on a grid based on the detected emotions.
-                        </div>
+                    <button class="about-btn" id="btn-about">About This Project</button>
+                    <button class="about-btn" id="btn-howto">How to Use</button>
+                </div>
+
+                <!-- About Modal -->
+                <div id="modal-about" class="modal-overlay">
+                    <div class="modal-content">
+                        <button class="modal-close">&times;</button>
+                        <h2 class="modal-title">About This Project</h2>
+                        <p>
+                            This explorer uses facial emotion detection to analyze artworks.
+                            Each artwork is placed on a grid based on the detected emotions.
+                            
+                        </p>
+                        <h3 class="modal-title">How it works</h3>
+                        <p>
+                            We leverage a state-of-the-art facial‐recognition model to detect and analyze emotions—happiness, sadness, anger, fear, and more—in artworks. By adjusting the sliders, you choose which emotions to explore; the app then surfaces images where those feelings are present. At the same time, an interactive “emotion map” visualizes the frequency and intensity of each emotion, so you can instantly see which feelings dominate the entire collection or any selected subset of images.
+                            
+                        </p>
                     </div>
-                    <div class="info-box">
-                        <div class="info-title">How to Use</div>
-                        <div class="info-content">
-                            Click on the emotion grid or use the sliders to select an emotion zone. A random artwork from that zone will be displayed with emotion percentages.
+                </div>
+
+                <!-- How To Use Modal -->
+                <div id="modal-howto" class="modal-overlay">
+                    <div class="modal-content">
+                        <button class="modal-close">&times;</button>
+                        <h2 class="modal-title">How to Use</h2>
+                        <div class="method-explanation">
+                            <h3>Getting Started</h3>
+                            <p>Begin by selecting an emotion zone on the 20×20 grid or by adjusting the sliders:</p>
+                            
+                            <h3>Selecting an Emotion Zone</h3>
+                            <ul>
+                                <strong>Click a cell</strong> on the emotion map to choose that zone
+                                    <li>Or use the sliders:<br></li>
+                                        • X: Angry ↔ Happy<br>
+                                        • Y: Sad ↔ Fear
+                                    
+                            </ul>
+                            
+                            <h3>Loading Images</h3>
+                            <ol>
+                                <li><strong>Click “Random Image”</strong> to view a piece from the selected zone</li>
+                                <li><strong>Click “Random Zone”</strong> to jump to a different area of the map</li>
+                            </ol>
+                            
+                            <h3>Viewing Results</h3>
+                            <p>The chosen artwork will display:</p>
+                            <ul>
+                                <li>A bounding box around the face</li>
+                                <li>Emotion percentages below the image</li>
+                            </ul>
+                            
+                            <h3>Exploring Further</h3>
+                            <p>Adjust the sliders or click other cells at any time to instantly load new artworks and see which emotions dominate your selection.</p>
                         </div>
                     </div>
                 </div>
-            </div>
-            
+
+            </div> <!-- end of .main-content -->
+
             <div class="controls">
                 <div class="emotion-map-container">
                     <div class="map-header">
