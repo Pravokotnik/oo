@@ -4,14 +4,23 @@ const EMOTION_AXES = {
     'x': ['angry', 'happy'],
     'y': ['sad', 'fear']
 };
+// const EMOTION_COLORS = {
+//     'angry': '#e74c3c',
+//     'happy': '#2ecc71',
+//     'sad': '#3498db',
+//     'fear': '#9b59b6',
+//     'surprise': '#f1c40f',
+//     'neutral': '#95a5a6',
+//     'disgust': '#1abc9c'
+// };
 const EMOTION_COLORS = {
-    'angry': '#e74c3c',
-    'happy': '#2ecc71',
-    'sad': '#3498db',
-    'fear': '#9b59b6',
-    'surprise': '#f1c40f',
-    'neutral': '#95a5a6',
-    'disgust': '#1abc9c'
+  angry:    '#f7768e', // rosy red
+  happy:    '#7f5af0', // accent
+  sad:      '#89b4fa', // soft blue
+  fear:     '#cba6f7', // lavender
+  surprise: '#f9e2af', // warm yellow
+  neutral:  '#a6adc8', // subtext
+  disgust:  '#94e2d5'  // mint
 };
 const CHUNKS_DIR = 'web_emotion_data/chunks';
 const METADATA_URL = 'web_emotion_data/metadata.json';
@@ -19,7 +28,7 @@ const METADATA_URL = 'web_emotion_data/metadata.json';
 // State
 let emotionData = {};
 let grid = {};
-let currentPoint = { x: 10, y: 10 };
+let currentPoint = { x: 9, y: 9 };
 let currentImage = null;
 let metadata = null;
 let loadedChunks = 0;
@@ -127,16 +136,27 @@ function createGrid() {
     }
 }
 
+// function getCellColor(count) {
+//     const logCount = Math.log(count + 1);
+//     const intensity = Math.min(1, logCount / 4);
+    
+//     // Interpolate from dark blue to green
+//     const r = Math.floor(26 + intensity * 40);
+//     const g = Math.floor(82 + intensity * 120);
+//     const b = Math.floor(118 + intensity * 80);
+    
+//     return `rgb(${r}, ${g}, ${b})`;
+// }
 function getCellColor(count) {
-    const logCount = Math.log(count + 1);
-    const intensity = Math.min(1, logCount / 4);
-    
-    // Interpolate from dark blue to green
-    const r = Math.floor(26 + intensity * 40);
-    const g = Math.floor(82 + intensity * 120);
-    const b = Math.floor(118 + intensity * 80);
-    
-    return `rgb(${r}, ${g}, ${b})`;
+  // t in [0,1] using log scale as you had
+  const t = Math.min(1, Math.log(count + 1) / 4);
+
+  // interpolate between base card (#2a2a3e) and accent (#7f5af0)
+  const r = Math.round(42 + t * (127 - 42)); // 0x2a -> 0x7f
+  const g = Math.round(42 + t * ( 90 - 42)); // 0x2a -> 0x5a
+  const b = Math.round(62 + t * (240 - 62)); // 0x3e -> 0xf0
+
+  return `rgb(${r}, ${g}, ${b})`;
 }
 
 function setupEventListeners() {
