@@ -115,7 +115,7 @@ h1 {
 /* Face box aligned to theme accent */
 .face-box {
   position: absolute;
-  border: 2px solid var(--accent);
+  border: 3px solid rgb(217, 155, 255);
   box-shadow: 0 0 10px rgba(127, 90, 240, 0.5);
   pointer-events: none;
   display: none;
@@ -228,7 +228,7 @@ h1 {
 }
 
 .grid-cell.selected {
-  background: rgba(150,240,255,1.0) !important;
+  background: rgba(255,250,100,1.0) !important;
   /* box-shadow: inset 0 0 0 2px var(--accent); */
   z-index: 5;
 }
